@@ -5,6 +5,7 @@ import { findNode, trackNodes } from './content/lessons.js'
 import { LEARNING } from './content/learning.js'
 import type { LessonNode, Task, Track } from './content/types.js'
 import { all, db, one, run } from './db.js'
+import { env } from './env.js'
 import { bad, HttpError } from './http.js'
 import { buildArtifact, gradePrompt } from './mistral.js'
 import { dayKey, shiftDay, weekday, weekKey } from './time.js'
@@ -79,6 +80,14 @@ function lessonOf(nodeId: string) {
 /* ---------- Сердечки ---------- */
 
 async function syncHearts(u: UserRow) {
+  if (u.infinite_hearts) {
+    if (u.hearts !== MAX_HEARTS || u.hearts_at !== null) {
+      await run('UPDATE users SET hearts = ?, hearts_at = NULL WHERE id = ?', [MAX_HEARTS, u.id])
+      u.hearts = MAX_HEARTS
+      u.hearts_at = null
+    }
+    return
+  }
   if (u.hearts >= MAX_HEARTS) return
   const now = Date.now()
   const start = u.hearts_at ?? now
@@ -192,6 +201,8 @@ export async function getState(stale: UserRow) {
 
   return {
     user: { id: u.id, name: u.name, email: u.email, emailVerified: !!u.email_verified, goal: u.goal, level: u.level, mins: u.mins, track: u.track, createdAt: u.created_at },
+    isAdmin: !!u.email_verified && env.adminEmails.includes((u.email ?? '').trim().toLowerCase()),
+    infiniteHearts: !!u.infinite_hearts,
     xp: Number(totals?.xp ?? 0),
     weekXp: Number(totals?.week_xp ?? 0),
     hearts: u.hearts,
@@ -298,13 +309,13 @@ export async function answer(u: UserRow, body: Answer) {
   if (task.type === 'asm') fb.right = task.right
   else fb.correctIndex = task.correct
 
-  const hearts = ok ? u.hearts : u.hearts - 1
+  const hearts = u.infinite_hearts ? MAX_HEARTS : ok ? u.hearts : u.hearts - 1
   const nextQueue = ok ? queue : [...queue, taskIdx]
   await db().batch(
     [
       {
         sql: 'UPDATE users SET hearts = ?, hearts_at = ?, bugs = bugs + ? WHERE id = ?',
-        args: [hearts, !ok && u.hearts_at === null ? Date.now() : u.hearts_at, ok && task.type === 'bug' ? 1 : 0, u.id],
+        args: [hearts, u.infinite_hearts ? null : !ok && u.hearts_at === null ? Date.now() : u.hearts_at, ok && task.type === 'bug' ? 1 : 0, u.id],
       },
       {
         sql: 'UPDATE active_lessons SET checked = 1, got = got + ?, mist = mist + ?, xp = xp + ?, feedback = ?, answer = ?, queue = ? WHERE user_id = ?',

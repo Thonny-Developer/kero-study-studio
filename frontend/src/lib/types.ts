@@ -51,6 +51,8 @@ export interface LessonView {
 
 export interface Me {
   user: { id: string; name: string; email: string | null; emailVerified: boolean; goal: string | null; level: string | null; mins: number | null; track: Track; createdAt: number }
+  isAdmin: boolean
+  infiniteHearts: boolean
   xp: number
   weekXp: number
   hearts: number

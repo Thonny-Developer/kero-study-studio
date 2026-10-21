@@ -70,6 +70,7 @@ interface Actions {
   logout: () => Promise<void>
   rename: (name: string) => Promise<boolean>
   setTrack: (t: Track) => void
+  toggleInfiniteHearts: (enabled: boolean) => Promise<void>
   openNode: (id: string) => Promise<void>
   openProject: (unitId: string) => void
   select: (i: number) => void
@@ -278,6 +279,18 @@ export const useGame = create<GameState>()(
         setTrack: (track) => {
           set({ track })
           api<Me>('/api/me', { method: 'PATCH', body: { track } }).catch(() => {})
+        },
+
+        toggleInfiniteHearts: async (enabled) => {
+          if (get().busy) return
+          set({ busy: true })
+          try {
+            applyMe(await api<Me>('/api/admin/infinite-hearts', { body: { enabled } }))
+          } catch (e) {
+            fail(e)
+          } finally {
+            set({ busy: false })
+          }
         },
 
         openNode: async (id) => {

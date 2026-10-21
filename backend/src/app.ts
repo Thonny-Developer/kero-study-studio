@@ -25,6 +25,12 @@ app.use(withTz)
 
 const user = (req: Request) => req.user as UserRow
 
+function requireAdmin(req: Request, _res: Response, next: NextFunction) {
+  if (!user(req).email_verified || !env.adminEmails.includes((user(req).email ?? '').trim().toLowerCase()))
+    throw new HttpError(403, 'Этот раздел доступен только администратору', 'admin')
+  next()
+}
+
 /* ---------- Аккаунт ---------- */
 
 const NameSchema = z
@@ -150,6 +156,12 @@ app.patch('/api/me', requireUser, async (req, res) => {
     u.track = b.track
   }
   res.json(await getState(u))
+})
+
+app.post('/api/admin/infinite-hearts', requireUser, requireAdmin, async (req, res) => {
+  const b = parse(z.object({ enabled: z.boolean() }), req.body)
+  await run('UPDATE users SET infinite_hearts = ? WHERE id = ?', [b.enabled ? 1 : 0, user(req).id])
+  res.json(await getState(user(req)))
 })
 
 /* ---------- Карта и урок ---------- */

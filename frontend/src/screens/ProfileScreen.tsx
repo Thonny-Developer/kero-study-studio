@@ -118,7 +118,8 @@ export function ProfileScreen() {
   const me = useGame((s) => s.me)
   const course = useGame((s) => s.course)
   const theme = useGame((s) => s.theme)
-  const { setTheme, rename, openProject, logout } = useGame.getState()
+  const busy = useGame((s) => s.busy)
+  const { setTheme, rename, openProject, logout, toggleInfiniteHearts } = useGame.getState()
   const [editing, setEditing] = useState(false)
   if (!me || !course) return null
 
@@ -185,6 +186,34 @@ export function ProfileScreen() {
         </div>
 
         <EmailCard me={me} />
+
+        {me.isAdmin && (
+          <section className="flex flex-col gap-3 rounded-unit border-[1.5px] border-acc/30 bg-sf p-4">
+            <div>
+              <div className="font-display text-base font-bold">Админ-панель</div>
+              <p className="mt-1 text-[13px] leading-[1.4] text-ink-2">Настройки только для твоего аккаунта.</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={me.infiniteHearts}
+              disabled={busy}
+              onClick={() => toggleInfiniteHearts(!me.infiniteHearts)}
+              className={['flex min-h-[54px] items-center justify-between rounded-xl border-2 px-3.5 text-left transition-colors', me.infiniteHearts ? 'border-ok bg-ok-soft' : 'border-line bg-bg', busy ? 'opacity-60' : ''].join(' ')}
+            >
+              <span className="flex items-center gap-2.5">
+                <Icon name="heart" size={20} />
+                <span>
+                  <span className="block text-sm font-bold">Бесконечные сердца</span>
+                  <span className="block text-xs text-ink-2">{me.infiniteHearts ? 'Включены' : 'Выключены'}</span>
+                </span>
+              </span>
+              <span className={['grid h-7 w-12 place-items-center rounded-full font-mono text-sm font-extrabold', me.infiniteHearts ? 'bg-ok text-white' : 'bg-sf2 text-ink-3'].join(' ')}>
+                {me.infiniteHearts ? '∞' : '○'}
+              </span>
+            </button>
+          </section>
+        )}
 
         <div className="grid grid-cols-2 gap-2.5">
           {stats.map((p) => (

@@ -17,11 +17,12 @@ export function StatsHeader() {
   const streak = useGame((s) => s.me?.streak ?? 0)
   const xp = useGame((s) => s.me?.xp ?? 0)
   const hearts = useGame((s) => s.me?.hearts ?? 0)
+  const infiniteHearts = useGame((s) => s.me?.infiniteHearts ?? false)
   return (
     <div className="flex gap-1.5">
       <Chip icon="flame" color="var(--gold)" value={streak} />
       <Chip icon="bolt" color="var(--acc)" value={xp.toLocaleString('ru-RU')} />
-      <Chip icon="heart" color="var(--err)" value={hearts} />
+      <Chip icon="heart" color="var(--err)" value={infiniteHearts ? '∞' : hearts} />
     </div>
   )
 }

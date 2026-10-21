@@ -21,6 +21,7 @@ const MEH: Look = { bg: 'var(--goldSoft)', c: 'var(--gold)', ink: 'var(--goldInk
 /** Bottom sheet с фидбеком от сервера после «Проверить» */
 export function FeedbackSheet({ type, fb }: { type: TaskType; fb: Feedback | null }) {
   const hearts = useGame((s) => s.me?.hearts ?? 0)
+  const infiniteHearts = useGame((s) => s.me?.infiniteHearts ?? false)
   const busy = useGame((s) => s.busy)
   const next = useGame((s) => s.next)
 
@@ -37,7 +38,7 @@ export function FeedbackSheet({ type, fb }: { type: TaskType; fb: Feedback | nul
     meta = 'Сердечки не тратим — это песочница'
     metaIcon = 'heart'
   } else {
-    meta = hearts > 0 ? `−1 сердечко · осталось ${hearts}` : 'Сердечки закончились'
+    meta = infiniteHearts ? 'Бесконечные сердца · потеря не засчитывается' : hearts > 0 ? `−1 сердечко · осталось ${hearts}` : 'Сердечки закончились'
     metaIcon = 'heart'
   }
 

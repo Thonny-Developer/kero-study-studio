@@ -99,6 +99,7 @@ function TaskBody({ task, busy }: { task: Task; busy: boolean }) {
 export function LessonScreen() {
   const live = useGame((s) => s.me?.lesson ?? null)
   const hearts = useGame((s) => s.me?.hearts ?? 0)
+  const infiniteHearts = useGame((s) => s.me?.infiniteHearts ?? false)
   const busy = useGame((s) => s.busy)
   const study = useGame((s) => s.study)
   const { check, quitLesson, setStudyText, finishStudy } = useGame.getState()
@@ -126,7 +127,7 @@ export function LessonScreen() {
           <span className="text-err">
             <Icon name="heart" size={22} />
           </span>
-          {hearts}
+          {infiniteHearts ? '∞' : hearts}
         </motion.div>
       </div>
 

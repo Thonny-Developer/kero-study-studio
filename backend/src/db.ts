@@ -16,6 +16,7 @@ const SCHEMA = [
     tz TEXT NOT NULL DEFAULT 'UTC',
     hearts INTEGER NOT NULL DEFAULT 5,
     hearts_at INTEGER,
+    infinite_hearts INTEGER NOT NULL DEFAULT 0,
     streak INTEGER NOT NULL DEFAULT 0,
     max_streak INTEGER NOT NULL DEFAULT 0,
     last_day TEXT,
@@ -104,6 +105,7 @@ const USER_COLUMNS: [string, string][] = [
   ['email', 'TEXT'],
   ['email_key', 'TEXT'],
   ['email_verified', 'INTEGER NOT NULL DEFAULT 0'],
+  ['infinite_hearts', 'INTEGER NOT NULL DEFAULT 0'],
 ]
 
 let client: Client | null = null

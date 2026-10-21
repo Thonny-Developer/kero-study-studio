@@ -19,6 +19,7 @@ export interface UserRow {
   tz: string
   hearts: number
   hearts_at: number | null
+  infinite_hearts: number
   streak: number
   max_streak: number
   last_day: string | null

@@ -17,6 +17,11 @@ export const env = {
     .filter(Boolean),
   /** Куда вернуть юзера после клика по ссылке из письма. Пусто — тот же хост, что принял запрос. */
   appUrl: (process.env.APP_URL ?? '').replace(/\/$/, ''),
+  /** Администраторы задаются явно, чтобы обычные аккаунты не могли включить привилегии. */
+  adminEmails: (process.env.ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean),
   smtp: {
     host: process.env.SMTP_HOST ?? '',
     port: Number(process.env.SMTP_PORT) || 587,
