@@ -1,4 +1,5 @@
 import type { PathNode, Track, Unit } from './types.js'
+import { NEXT_UNITS } from './next-units.js'
 
 /**
  * Контент курса. Чтобы добавить урок — допиши узел в `nodes` нужного юнита.
@@ -739,6 +740,7 @@ export const COURSE: Record<Track, Unit[]> = {
         folio: { title: 'Telegram-бот', tag: 'КОД', icon: 'bolt' },
       },
     },
+    ...NEXT_UNITS.code,
   ],
 
   mkt: [
@@ -1347,6 +1349,7 @@ export const COURSE: Record<Track, Unit[]> = {
         folio: { title: 'Идеи для Reels', tag: 'REELS', icon: 'img' },
       },
     },
+    ...NEXT_UNITS.mkt,
   ],
 }
 
