@@ -8,6 +8,7 @@ import { SidePanel } from './components/ui/SidePanel'
 import { TabBar, TAB_SCREENS } from './components/ui/TabBar'
 import { Toast } from './components/ui/Toast'
 import { EndScreen } from './screens/EndScreen'
+import { ForgotScreen } from './screens/ForgotScreen'
 import { LeagueScreen } from './screens/LeagueScreen'
 import { LessonScreen } from './screens/LessonScreen'
 import { LoginScreen } from './screens/LoginScreen'
@@ -16,13 +17,17 @@ import { NoHeartsScreen } from './screens/NoHeartsScreen'
 import { Onboarding } from './screens/Onboarding'
 import { ProfileScreen } from './screens/ProfileScreen'
 import { ProjectScreen } from './screens/ProjectScreen'
+import { VerifyScreen } from './screens/VerifyScreen'
 import { Welcome } from './screens/Welcome'
 import { useGame, type GameState, type Screen } from './store/game'
+import { toast } from './store/toast'
 
 const SCREENS: Record<Screen, () => ReactNode> = {
   welcome: Welcome,
   onboarding: Onboarding,
   login: LoginScreen,
+  forgot: ForgotScreen,
+  verify: VerifyScreen,
   map: MapScreen,
   lesson: LessonScreen,
   end: EndScreen,
@@ -32,7 +37,7 @@ const SCREENS: Record<Screen, () => ReactNode> = {
   profile: ProfileScreen,
 }
 
-const GUEST: Screen[] = ['welcome', 'onboarding', 'login']
+const GUEST: Screen[] = ['welcome', 'onboarding', 'login', 'forgot']
 
 /** Экран, который реально можно показать: защита от рассинхрона после перезагрузки */
 function safeScreen(s: GameState): Screen | 'splash' {
@@ -80,6 +85,14 @@ export function App() {
 
   // Состояние живёт на сервере: тянем при старте и при возврате во вкладку
   useEffect(() => {
+    // Вернулись по кнопке из письма: /?verified=1
+    const params = new URLSearchParams(window.location.search)
+    const verified = params.get('verified')
+    if (verified !== null) {
+      toast(verified === '1' ? 'Почта подтверждена' : 'Ссылка устарела — запроси новый код')
+      window.history.replaceState(null, '', window.location.pathname)
+      if (verified === '1' && useGame.getState().screen === 'verify') useGame.setState({ screen: 'map' })
+    }
     boot()
     const onVis = () => document.visibilityState === 'visible' && refresh()
     document.addEventListener('visibilitychange', onVis)

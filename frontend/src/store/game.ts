@@ -10,7 +10,7 @@ import { toast } from './toast'
 export const SB_PASS = 60
 export const XP_PROJECT = 50
 
-export type Screen = 'welcome' | 'onboarding' | 'login' | 'map' | 'lesson' | 'end' | 'noHearts' | 'project' | 'league' | 'profile'
+export type Screen = 'welcome' | 'onboarding' | 'login' | 'forgot' | 'verify' | 'map' | 'lesson' | 'end' | 'noHearts' | 'project' | 'league' | 'profile'
 export type Theme = 'light' | 'dark'
 
 export interface Draft {
@@ -43,6 +43,8 @@ interface Data {
   busy: boolean
   /** трек, который сейчас открыт на карте (сохраняется на сервере) */
   track: Track
+  /** когда отправили последнее письмо с кодом — для таймера «отправить ещё раз» */
+  codeSentAt: number
 }
 
 interface Actions {
@@ -52,8 +54,12 @@ interface Actions {
   go: (s: Screen) => void
   setObStep: (n: number) => void
   setDraft: (d: Partial<Draft>) => void
-  register: (name: string, password: string) => Promise<boolean>
-  login: (name: string, password: string) => Promise<boolean>
+  register: (name: string, email: string, password: string) => Promise<boolean>
+  login: (login: string, password: string) => Promise<boolean>
+  sendEmailCode: (email?: string) => Promise<boolean>
+  verifyEmail: (code: string) => Promise<boolean>
+  forgot: (email: string) => Promise<boolean>
+  resetPassword: (email: string, code: string, password: string) => Promise<boolean>
   logout: () => Promise<void>
   rename: (name: string) => Promise<boolean>
   setTrack: (t: Track) => void
@@ -87,7 +93,7 @@ function screenFor(me: Me, current: Screen): Screen {
     if (current === 'noHearts' || (me.hearts <= 0 && !me.lesson.checked)) return 'noHearts'
     return 'lesson'
   }
-  if (current === 'lesson' || current === 'noHearts' || current === 'welcome' || current === 'onboarding' || current === 'login') return 'map'
+  if (['lesson', 'noHearts', 'welcome', 'onboarding', 'login', 'forgot'].includes(current)) return 'map'
   return current
 }
 
@@ -120,6 +126,7 @@ export const useGame = create<GameState>()(
         booted: false,
         busy: false,
         track: 'code',
+        codeSentAt: 0,
 
         boot: async () => {
           const { token } = get()
@@ -150,10 +157,29 @@ export const useGame = create<GameState>()(
         setObStep: (obStep) => set({ obStep }),
         setDraft: (d) => set({ draft: { ...get().draft, ...d } }),
 
-        register: async (name, password) => {
+        register: async (name, email, password) => {
           set({ busy: true })
           try {
-            const { token } = await api<{ token: string }>('/api/auth/register', { body: { name, password, ...get().draft } })
+            const r = await api<{ token: string; emailSent: boolean }>('/api/auth/register', {
+              body: { name, email, password, ...get().draft },
+              timeout: 40_000,
+            })
+            await signedIn(r.token)
+            set({ screen: 'verify', codeSentAt: r.emailSent ? Date.now() : 0 })
+            if (!r.emailSent) toast('Аккаунт создан, но письмо не ушло — отправь код ещё раз')
+            return true
+          } catch (e) {
+            fail(e)
+            return false
+          } finally {
+            set({ busy: false })
+          }
+        },
+
+        login: async (login, password) => {
+          set({ busy: true })
+          try {
+            const { token } = await api<{ token: string }>('/api/auth/login', { body: { login, password } })
             await signedIn(token)
             return true
           } catch (e) {
@@ -164,11 +190,55 @@ export const useGame = create<GameState>()(
           }
         },
 
-        login: async (name, password) => {
+        sendEmailCode: async (email) => {
           set({ busy: true })
           try {
-            const { token } = await api<{ token: string }>('/api/auth/login', { body: { name, password } })
+            const r = await api<{ email: string; state: Me }>('/api/email/send', { body: email ? { email } : {}, timeout: 40_000 })
+            applyMe(r.state, { screen: 'verify', codeSentAt: Date.now() })
+            toast(`Код отправлен на ${r.email}`)
+            return true
+          } catch (e) {
+            fail(e)
+            return false
+          } finally {
+            set({ busy: false })
+          }
+        },
+
+        verifyEmail: async (code) => {
+          set({ busy: true })
+          try {
+            const r = await api<{ state: Me }>('/api/email/verify', { body: { code } })
+            applyMe(r.state)
+            return true
+          } catch (e) {
+            fail(e)
+            return false
+          } finally {
+            set({ busy: false })
+          }
+        },
+
+        forgot: async (email) => {
+          set({ busy: true })
+          try {
+            await api('/api/auth/forgot', { body: { email }, timeout: 40_000 })
+            set({ codeSentAt: Date.now() })
+            return true
+          } catch (e) {
+            fail(e)
+            return false
+          } finally {
+            set({ busy: false })
+          }
+        },
+
+        resetPassword: async (email, code, password) => {
+          set({ busy: true })
+          try {
+            const { token } = await api<{ token: string }>('/api/auth/reset', { body: { email, code, password } })
             await signedIn(token)
+            toast('Пароль обновлён')
             return true
           } catch (e) {
             fail(e)
@@ -308,6 +378,7 @@ export const useGame = create<GameState>()(
         ui: s.ui,
         result: s.result,
         projectUnit: s.projectUnit,
+        codeSentAt: s.codeSentAt,
       }),
       // старое локальное состояние (до бэкенда) не переносим
       migrate: (persisted, version) => (version < 2 ? {} : persisted) as Partial<GameState>,

@@ -48,6 +48,72 @@ function Calendar({ me }: { me: Me }) {
   )
 }
 
+function EmailCard({ me }: { me: Me }) {
+  const busy = useGame((s) => s.busy)
+  const sentAt = useGame((s) => s.codeSentAt)
+  const { sendEmailCode, go } = useGame.getState()
+  const [editing, setEditing] = useState(!me.user.email)
+  const [value, setValue] = useState(me.user.email ?? '')
+  const { email, emailVerified } = me.user
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim())
+
+  // Код уже отправлен и ещё действует — просто открываем ввод
+  const confirm = () => (Date.now() - sentAt < 15 * 60_000 ? go('verify') : sendEmailCode())
+
+  return (
+    <div className="flex flex-col gap-3 rounded-btn border-[1.5px] border-line bg-sf p-3.5">
+      <div className="flex items-center gap-3">
+        <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-tile ${emailVerified ? 'bg-ok-soft text-ok-ink' : 'bg-gold-soft text-gold-ink'}`}>
+          <Icon name="mail" size={22} />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="truncate text-[15px] font-bold">{email ?? 'Почта не привязана'}</span>
+          <span className={`font-mono text-[11px] font-bold tracking-[.06em] ${emailVerified ? 'text-ok-ink' : 'text-gold-ink'}`}>
+            {emailVerified ? 'ПОДТВЕРЖДЕНА' : email ? 'НЕ ПОДТВЕРЖДЕНА' : 'НУЖНА ДЛЯ ВОССТАНОВЛЕНИЯ'}
+          </span>
+        </div>
+        {!editing && (
+          <button type="button" onClick={() => setEditing(true)} className="text-sm font-bold text-ink-2">
+            Сменить
+          </button>
+        )}
+      </div>
+      {editing ? (
+        <form
+          className="flex gap-2"
+          onSubmit={async (e) => {
+            e.preventDefault()
+            if (valid && !busy && (await sendEmailCode(value.trim()))) setEditing(false)
+          }}
+        >
+          <input
+            type="email"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="you@mail.com"
+            autoComplete="email"
+            className="h-11 min-w-0 flex-1 rounded-xl border-2 border-line bg-bg px-3 text-[15px] font-semibold text-ink outline-none focus:border-acc"
+          />
+          <button type="submit" disabled={!valid || busy} className="h-11 shrink-0 rounded-xl bg-acc px-4 text-sm font-bold text-white shadow-[0_3px_0_var(--accSh)] disabled:bg-sf2 disabled:text-ink-3 disabled:shadow-none">
+            Код
+          </button>
+        </form>
+      ) : (
+        !emailVerified && (
+          <button
+            type="button"
+            onClick={confirm}
+            disabled={busy}
+            className="h-11 rounded-xl bg-acc text-sm font-bold text-white shadow-[0_3px_0_var(--accSh)] active:translate-y-[3px] active:shadow-none"
+          >
+            Подтвердить почту
+          </button>
+        )
+      )}
+    </div>
+  )
+}
+
 export function ProfileScreen() {
   const me = useGame((s) => s.me)
   const course = useGame((s) => s.course)
@@ -117,6 +183,8 @@ export function ProfileScreen() {
             <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} />
           </button>
         </div>
+
+        <EmailCard me={me} />
 
         <div className="grid grid-cols-2 gap-2.5">
           {stats.map((p) => (

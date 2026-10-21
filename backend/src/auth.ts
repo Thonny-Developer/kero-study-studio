@@ -10,6 +10,8 @@ const scrypt = promisify(crypto.scrypt) as (pw: string, salt: string, len: numbe
 export interface UserRow {
   id: string
   name: string
+  email: string | null
+  email_verified: number
   goal: string | null
   level: string | null
   mins: number | null

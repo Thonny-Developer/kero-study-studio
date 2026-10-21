@@ -38,10 +38,13 @@ export function LoginScreen() {
           </div>
         </div>
         <div className="flex flex-col gap-4">
-          <Field label="ИМЯ" value={name} onChange={(e) => setName(e.target.value)} autoComplete="username" autoFocus />
+          <Field label="ИМЯ ИЛИ ПОЧТА" value={name} onChange={(e) => setName(e.target.value)} autoComplete="username" autoFocus />
           <Field label="ПАРОЛЬ" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
         </div>
         <button type="submit" hidden />
+        <button type="button" onClick={() => go('forgot')} className="-mt-2 self-end text-sm font-bold text-ink-2">
+          Забыли пароль?
+        </button>
         <button
           type="button"
           onClick={() => {

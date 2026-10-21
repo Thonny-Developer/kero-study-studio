@@ -32,6 +32,10 @@ npm run dev            # http://localhost:8787, перезапуск при из
 | `DATABASE_URL` | `file:./data/vibely.db` локально или `libsql://….turso.io` в проде |
 | `DATABASE_AUTH_TOKEN` | токен Turso |
 | `CORS_ORIGIN` | адрес фронта, например `https://vibely.vercel.app`. Если пусто — запросы разрешены с любого origin |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_TLS` | SMTP-сервер для писем. Для Gmail: `smtp.gmail.com`, `587`, `true` (STARTTLS) |
+| `SMTP_USER`, `SMTP_PASSWORD` | логин и пароль SMTP. Для Gmail нужен [пароль приложения](https://myaccount.google.com/apppasswords), обычный пароль не подойдёт |
+| `MAIL_FROM` | имя отправителя (`Kero Vibely`) или полный адрес `Имя <addr@host>` |
+| `APP_URL` | адрес фронта, куда вернуть юзера после кнопки в письме. Если пусто — хост, принявший запрос (в dev это прокси Vite) |
 | `PORT` | порт, по умолчанию 8787 |
 
 ### Какие модели выбраны и почему
@@ -49,6 +53,7 @@ npm run dev            # http://localhost:8787, перезапуск при из
 
 - `users`: профиль, сердечки, стрик, таймзона;
 - `sessions`: хэши токенов (сам токен в БД не хранится);
+- `email_codes`: одноразовые коды из писем, тоже хэшами; 15 минут жизни, 5 попыток, новый код не чаще раза в минуту;
 - `xp_events`: каждое начисление XP с днём и неделей; из них считаются общий XP, недельный XP и лига;
 - `runs`: пройденные уроки, проекты и сундуки (из них берутся «пройдено», календарь и статистика юнита);
 - `active_lessons`: текущий урок, поэтому перезагрузка страницы ничего не ломает;
@@ -62,8 +67,13 @@ npm run dev            # http://localhost:8787, перезапуск при из
 
 | Метод | Путь | Что делает |
 |---|---|---|
-| POST | `/api/auth/register` | `{ name, password, goal?, level?, mins? }` → `{ token }` |
-| POST | `/api/auth/login` | `{ name, password }` → `{ token }` |
+| POST | `/api/auth/register` | `{ name, email, password, goal?, level?, mins? }` → `{ token, emailSent }` |
+| POST | `/api/auth/login` | `{ login, password }`, где `login` — имя или почта → `{ token }` |
+| POST | `/api/auth/forgot` | `{ email }`: письмо с кодом сброса. Ответ одинаковый, есть такая почта или нет |
+| POST | `/api/auth/reset` | `{ email, code, password }`: новый пароль, остальные сессии закрываются → `{ token }` |
+| GET | `/api/auth/verify-link?token=` | кнопка из письма: подтверждает почту и редиректит на `APP_URL/?verified=1` |
+| POST | `/api/email/send` | `{ email? }`: привязать или сменить почту и выслать код (без `email` — повторно на текущую) |
+| POST | `/api/email/verify` | `{ code }`: подтвердить почту |
 | POST | `/api/auth/logout` | удаляет сессию |
 | GET | `/api/course` | структура курса без заданий |
 | GET | `/api/me` | всё состояние юзера: XP, сердечки, стрик, дни, пройденное, текущий урок |
@@ -82,6 +92,14 @@ npm run dev            # http://localhost:8787, перезапуск при из
 
 Сгенерированный HTML отдаётся на `/p/:id` с `Content-Security-Policy: sandbox`, поэтому у такой страницы нет доступа к origin приложения. Вызовы AI ограничены 8 в минуту на юзера. Если Mistral не ответил, клиент получает понятную ошибку и может повторить. Подставных оценок нет.
 
+## Почта
+
+При регистрации почта обязательна, и на неё сразу уходит письмо с 6-значным кодом и кнопкой «Подтвердить почту». Если письмо не дошло, аккаунт всё равно создаётся, а код можно запросить заново: с экрана подтверждения или из профиля. Через почту можно войти (вместо имени) и сбросить пароль.
+
+Шаблон письма лежит в `src/mail.ts`: таблицы и инлайн-стили, чтобы одинаково выглядело в Gmail, Apple Mail и Outlook. Маскот вложен как `cid:`-картинка (`assets/blink.png`), потому что Gmail не показывает SVG.
+
+SMTP-хост резолвится в IPv4. На сетях без IPv6 nodemailer иначе иногда выбирает AAAA-адрес Gmail и висит до таймаута. TLS-сертификат при этом проверяется по настоящему имени хоста.
+
 ## Деплой
 
 ### Vercel + Turso
@@ -93,7 +111,7 @@ npm run dev            # http://localhost:8787, перезапуск при из
    turso db tokens create vibely
    ```
 2. В Vercel: **Add New → Project**, тот же репозиторий, **Root Directory** = `backend`, Framework Preset — **Other**.
-3. Добавь Environment Variables: `MISTRAL_API_KEY`, `MISTRAL_MODEL`, `MISTRAL_CODE_MODEL`, `DATABASE_URL` (libsql://…), `DATABASE_AUTH_TOKEN`, `CORS_ORIGIN` (адрес фронта).
+3. Добавь Environment Variables: `MISTRAL_API_KEY`, `MISTRAL_MODEL`, `MISTRAL_CODE_MODEL`, `DATABASE_URL` (libsql://…), `DATABASE_AUTH_TOKEN`, `CORS_ORIGIN` и `APP_URL` (адрес фронта), `SMTP_*` и `MAIL_FROM`.
 4. Нажми Deploy. `api/index.ts` экспортирует Express-приложение, а `vercel.json` направляет все пути в эту функцию (лимит 60 с — хватает на сборку лендинга).
 
 На Vercel файловую SQLite использовать нельзя: при `file:` URL сервер сразу сообщит об этом при старте.

@@ -27,6 +27,7 @@ export function Onboarding() {
   const busy = useGame((s) => s.busy)
   const { setObStep, setDraft, go, register } = useGame.getState()
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
   const account = step >= ONBOARDING.length
@@ -34,13 +35,14 @@ export function Onboarding() {
   const value = draft[st.key]
   const nameOk = name.trim().length >= 2
   const passOk = password.length >= 6
-  const has = account ? nameOk && passOk : value != null
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())
+  const has = account ? nameOk && emailOk && passOk : value != null
 
   const choose = (o: ObOption) => setDraft({ [st.key]: o.id })
   const next = async () => {
     if (!has || busy) return
     if (!account) return setObStep(step + 1)
-    await register(name.trim(), password)
+    await register(name.trim(), email.trim(), password)
   }
   const back = () => (step > 0 ? setObStep(step - 1) : go('welcome'))
 
@@ -76,13 +78,22 @@ export function Onboarding() {
           {account ? (
             <>
               <Bubble
-                title="Как тебя зовут?"
-                sub="Имя увидят соперники в лиге. Пароль нужен, чтобы зайти с другого устройства."
+                title="Создадим аккаунт"
+                sub="Имя увидят соперники в лиге. На почту пришлю код — так прогресс не потеряется и пароль можно восстановить."
                 mood={has ? 'happy' : 'idle'}
                 jump={has}
               />
               <div className="flex flex-col gap-4">
                 <Field label="ИМЯ" value={name} onChange={(e) => setName(e.target.value)} placeholder="Например, Алекс" maxLength={24} autoComplete="username" autoFocus />
+                <Field
+                  label="ПОЧТА"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@mail.com"
+                  autoComplete="email"
+                  inputMode="email"
+                />
                 <Field
                   label="ПАРОЛЬ"
                   type="password"

@@ -82,6 +82,27 @@ const SCHEMA = [
     updated_at INTEGER NOT NULL,
     UNIQUE(user_id, unit_id)
   )`,
+  // Одноразовые коды из писем: подтверждение почты и сброс пароля
+  `CREATE TABLE IF NOT EXISTS email_codes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    purpose TEXT NOT NULL,
+    email TEXT NOT NULL,
+    code_hash TEXT NOT NULL,
+    link_hash TEXT,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    expires_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    used_at INTEGER
+  )`,
+  `CREATE INDEX IF NOT EXISTS email_codes_user ON email_codes(user_id, purpose)`,
+]
+
+// Колонки, добавленные после первого релиза: ALTER для уже существующих баз
+const USER_COLUMNS: [string, string][] = [
+  ['email', 'TEXT'],
+  ['email_key', 'TEXT'],
+  ['email_verified', 'INTEGER NOT NULL DEFAULT 0'],
 ]
 
 let client: Client | null = null
@@ -103,6 +124,9 @@ export function ready() {
     const c = db()
     if (env.databaseUrl.startsWith('file:')) await c.execute('PRAGMA foreign_keys = ON')
     await c.batch(SCHEMA, 'write')
+    const cols = new Set((await c.execute('PRAGMA table_info(users)')).rows.map((r) => String(r.name)))
+    for (const [name, type] of USER_COLUMNS) if (!cols.has(name)) await c.execute(`ALTER TABLE users ADD COLUMN ${name} ${type}`)
+    await c.execute('CREATE UNIQUE INDEX IF NOT EXISTS users_email ON users(email_key)')
   })()
   return migrated
 }

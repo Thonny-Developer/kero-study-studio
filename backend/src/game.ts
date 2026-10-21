@@ -169,7 +169,7 @@ export async function getState(stale: UserRow) {
   }
 
   return {
-    user: { id: u.id, name: u.name, goal: u.goal, level: u.level, mins: u.mins, track: u.track, createdAt: u.created_at },
+    user: { id: u.id, name: u.name, email: u.email, emailVerified: !!u.email_verified, goal: u.goal, level: u.level, mins: u.mins, track: u.track, createdAt: u.created_at },
     xp: Number(totals?.xp ?? 0),
     weekXp: Number(totals?.week_xp ?? 0),
     hearts: u.hearts,

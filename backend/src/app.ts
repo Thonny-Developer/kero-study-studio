@@ -9,6 +9,7 @@ import { env } from './env.js'
 import { answer, buildProject, getProject, getState, league, next, openNode, quit, retry, sandbox } from './game.js'
 import { bad, HttpError } from './http.js'
 import { projectPage } from './page.js'
+import { confirmLink, confirmVerification, finishReset, normEmail, sendReset, sendVerification } from './email.js'
 import { courseView } from './views.js'
 
 export const app = express()
@@ -36,6 +37,7 @@ const PassSchema = z.string().min(6, 'Пароль — от 6 символов')
 
 const RegisterSchema = z.object({
   name: NameSchema,
+  email: z.string(),
   password: PassSchema,
   goal: z.enum(['launch', 'job', 'free']).nullish(),
   level: z.enum(['zero', 'some', 'pro']).nullish(),
@@ -48,23 +50,73 @@ function parse<T>(schema: z.ZodType<T>, body: unknown): T {
   return r.data
 }
 
+/** Откуда пришёл запрос — на этот адрес ведёт ссылка из письма */
+const origin = (req: Request) => `${req.protocol}://${req.get('host')}`
+
 app.post('/api/auth/register', async (req, res) => {
   const b = parse(RegisterSchema, req.body)
+  const { email, key: emailKey } = normEmail(b.email)
   const key = b.name.toLowerCase()
   if (await one('SELECT 1 FROM users WHERE name_key = ?', [key])) throw bad('Это имя уже занято', 'name-taken')
+  if (await one('SELECT 1 FROM users WHERE email_key = ?', [emailKey])) throw bad('Эта почта уже привязана к другому аккаунту', 'email-taken')
   const id = crypto.randomUUID()
   await run(
-    'INSERT INTO users (id, name, name_key, pass, goal, level, mins, tz, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [id, b.name, key, await hashPassword(b.password), b.goal ?? null, b.level ?? null, b.mins ?? null, req.tz, Date.now()],
+    'INSERT INTO users (id, name, name_key, email, email_key, pass, goal, level, mins, tz, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [id, b.name, key, email, emailKey, await hashPassword(b.password), b.goal ?? null, b.level ?? null, b.mins ?? null, req.tz, Date.now()],
   )
-  res.status(201).json({ token: await createSession(id) })
+  const token = await createSession(id)
+  // Аккаунт создан в любом случае; если письмо не ушло — его можно запросить заново
+  let emailSent = true
+  try {
+    await sendVerification((await one<UserRow>('SELECT * FROM users WHERE id = ?', [id]))!, undefined, origin(req))
+  } catch (e) {
+    emailSent = false
+    console.error('[register] письмо не отправлено:', e instanceof Error ? e.message : e)
+  }
+  res.status(201).json({ token, emailSent })
 })
 
+// Вход по имени или почте
 app.post('/api/auth/login', async (req, res) => {
-  const b = parse(z.object({ name: z.string().trim().min(1, 'Введи имя'), password: z.string().min(1, 'Введи пароль') }), req.body)
-  const u = await one<{ id: string; pass: string }>('SELECT id, pass FROM users WHERE name_key = ?', [b.name.toLowerCase()])
-  if (!u || !(await checkPassword(b.password, u.pass))) throw new HttpError(401, 'Неверное имя или пароль', 'bad-login')
+  const b = parse(
+    z.object({ login: z.string().trim().min(1, 'Введи имя или почту'), password: z.string().min(1, 'Введи пароль') }),
+    { login: req.body?.login ?? req.body?.name, password: req.body?.password },
+  )
+  const byEmail = b.login.includes('@')
+  const u = await one<{ id: string; pass: string }>(`SELECT id, pass FROM users WHERE ${byEmail ? 'email_key' : 'name_key'} = ?`, [
+    b.login.toLowerCase(),
+  ])
+  if (!u || !(await checkPassword(b.password, u.pass)))
+    throw new HttpError(401, byEmail ? 'Неверная почта или пароль' : 'Неверное имя или пароль', 'bad-login')
   res.json({ token: await createSession(u.id) })
+})
+
+/* ---------- Почта ---------- */
+
+app.post('/api/email/send', requireUser, async (req, res) => {
+  const email = await sendVerification(user(req), req.body?.email, origin(req))
+  res.json({ email, state: await getState(user(req)) })
+})
+
+app.post('/api/email/verify', requireUser, async (req, res) => {
+  await confirmVerification(user(req), req.body?.code)
+  res.json({ state: await getState(user(req)) })
+})
+
+// Кнопка в письме: подтверждаем и возвращаем в приложение
+app.get('/api/auth/verify-link', async (req, res) => {
+  const ok = await confirmLink(req.query.token)
+  res.redirect(302, `${env.appUrl || origin(req)}/?verified=${ok ? 1 : 0}`)
+})
+
+app.post('/api/auth/forgot', async (req, res) => {
+  await sendReset(req.body?.email, req.ip ?? '')
+  res.json({ ok: true })
+})
+
+app.post('/api/auth/reset', async (req, res) => {
+  const b = parse(z.object({ email: z.string(), code: z.string(), password: PassSchema }), req.body)
+  res.json({ token: await finishReset(b.email, b.code, b.password) })
 })
 
 app.post('/api/auth/logout', async (req, res) => {
@@ -165,7 +217,7 @@ app.get('/p/:id', async (req, res) => {
 })
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, ai: !!env.mistralKey, model: env.mistralModel })
+  res.json({ ok: true, ai: !!env.mistralKey, model: env.mistralModel, mail: !!(env.smtp.host && env.smtp.user) })
 })
 
 app.use('/api', (_req, _res) => {

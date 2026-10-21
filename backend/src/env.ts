@@ -15,6 +15,19 @@ export const env = {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean),
+  /** Куда вернуть юзера после клика по ссылке из письма. Пусто — тот же хост, что принял запрос. */
+  appUrl: (process.env.APP_URL ?? '').replace(/\/$/, ''),
+  smtp: {
+    host: process.env.SMTP_HOST ?? '',
+    port: Number(process.env.SMTP_PORT) || 587,
+    /** true на 587 — STARTTLS; на 465 соединение сразу шифрованное */
+    tls: (process.env.SMTP_TLS ?? 'true') !== 'false',
+    user: process.env.SMTP_USER ?? '',
+    pass: process.env.SMTP_PASSWORD ?? '',
+    from: process.env.MAIL_FROM ?? 'Vibely',
+  },
 }
+
+if (!env.smtp.host || !env.smtp.user) console.warn('[vibely] SMTP не настроен — письма с кодами отправляться не будут')
 
 if (!env.mistralKey) console.warn('[vibely] MISTRAL_API_KEY не задан — песочница и проекты будут отвечать 503')
