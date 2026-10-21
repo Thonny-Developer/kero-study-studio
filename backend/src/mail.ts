@@ -18,12 +18,19 @@ let transport: Transporter | null = null
 async function mailer() {
   if (!env.smtp.host || !env.smtp.user) throw new HttpError(503, 'Почта не настроена на сервере', 'mail')
   if (transport) return transport
-  const ip = await dns
-    .lookup(env.smtp.host, { family: 4 })
-    .then((r) => r.address)
-    .catch(() => env.smtp.host)
+  // Не переключаемся обратно на hostname при ошибке DNS: Nodemailer выполнит
+  // тот же неудачный lookup ещё раз. Повторяем разрешение до создания транспорта.
+  let ip: string | undefined
+  for (let attempt = 0; attempt < 3 && !ip; attempt++) {
+    try {
+      ip = (await dns.lookup(env.smtp.host, { family: 4 })).address
+    } catch (err) {
+      if (attempt === 2) throw err
+      await new Promise((resolve) => setTimeout(resolve, 300 * 2 ** attempt))
+    }
+  }
   transport = nodemailer.createTransport({
-    host: ip,
+    host: ip!,
     port: env.smtp.port,
     secure: env.smtp.port === 465,
     requireTLS: env.smtp.tls && env.smtp.port !== 465,
@@ -35,7 +42,7 @@ async function mailer() {
   return transport
 }
 
-const NETWORK_ERRORS = new Set(['ETIMEDOUT', 'ECONNECTION', 'ESOCKET', 'ECONNRESET', 'EDNS'])
+const NETWORK_ERRORS = new Set(['ETIMEDOUT', 'ECONNECTION', 'ESOCKET', 'ECONNRESET', 'EDNS', 'EAI_AGAIN'])
 
 /** MAIL_FROM может быть просто именем — тогда адрес берём из SMTP_USER */
 function fromHeader() {
