@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import type { InStatement } from '@libsql/client'
 import type { UserRow } from './auth.js'
 import { findNode, trackNodes } from './content/lessons.js'
+import { LEARNING } from './content/learning.js'
 import type { LessonNode, Task, Track } from './content/types.js'
 import { all, db, one, run } from './db.js'
 import { bad, HttpError } from './http.js'
@@ -138,6 +139,12 @@ function lessonView(a: ActiveRow) {
     kind: lesson.kind,
     track: f.track,
     unitId: f.unit.id,
+    study: LEARNING[f.node.id] ?? {
+      intro: lesson.name + ' — завершающий проект этого модуля. Собери решение вокруг понятной задачи и выбери один результат, который можно показать или проверить.',
+      example: 'Сначала сформулируй для кого и какую задачу решает проект. Затем сделай минимальную рабочую версию и проверь её на реальном сценарии.',
+      practice: 'Опиши свою идею проекта: кому она нужна, какую проблему решает и что будет готовым результатом.',
+      sample: 'Для начинающих дизайнеров: страница портфолио с тремя работами и формой связи; готовность — ссылки открываются, форма отправляет заявку.',
+    },
     idx: a.idx,
     total: lesson.tasks.length,
     got: a.got,

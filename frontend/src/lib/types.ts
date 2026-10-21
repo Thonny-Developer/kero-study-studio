@@ -36,6 +36,7 @@ export interface LessonView {
   kind: 'lesson' | 'project'
   track: Track
   unitId: string
+  study: { intro: string; example: string; practice: string; sample: string }
   idx: number
   total: number
   got: number

@@ -27,6 +27,12 @@ interface Ui {
   sbText: string
 }
 
+interface StudyState {
+  nodeId: string
+  text: string
+  done: boolean
+}
+
 interface Data {
   token: string | null
   theme: Theme
@@ -34,6 +40,7 @@ interface Data {
   obStep: number
   draft: Draft
   ui: Ui
+  study: StudyState
   result: LessonResult | null
   projectUnit: string | null
   // не сохраняются
@@ -74,12 +81,15 @@ interface Actions {
   next: () => Promise<void>
   quitLesson: () => Promise<void>
   retryLesson: () => Promise<void>
+  setStudyText: (nodeId: string, text: string) => void
+  finishStudy: (nodeId: string) => void
   continueAfterEnd: () => void
 }
 
 export type GameState = Data & Actions
 
 const EMPTY_UI: Ui = { key: '', sel: null, chosen: [], sbText: '' }
+const EMPTY_STUDY: StudyState = { nodeId: '', text: '', done: false }
 
 const taskKey = (l: LessonView | null) => (l ? `${l.nodeId}:${l.idx}:${l.startedAt}` : '')
 
@@ -107,7 +117,7 @@ export const useGame = create<GameState>()(
 
       const signedIn = async (token: string) => {
         setToken(token)
-        set({ token })
+        set({ token, study: EMPTY_STUDY })
         const me = await api<Me>('/api/me')
         applyMe(me, { track: me.user.track, screen: screenFor(me, 'map'), obStep: 0 })
       }
@@ -119,6 +129,7 @@ export const useGame = create<GameState>()(
         obStep: 0,
         draft: { goal: null, level: null, mins: null },
         ui: EMPTY_UI,
+        study: EMPTY_STUDY,
         result: null,
         projectUnit: null,
         me: null,
@@ -251,7 +262,7 @@ export const useGame = create<GameState>()(
         logout: async () => {
           await api('/api/auth/logout', { body: {} }).catch(() => {})
           setToken(null)
-          set({ token: null, me: null, screen: 'welcome', result: null, projectUnit: null, ui: EMPTY_UI })
+          set({ token: null, me: null, screen: 'welcome', result: null, projectUnit: null, ui: EMPTY_UI, study: EMPTY_STUDY })
         },
 
         rename: async (name) => {
@@ -358,6 +369,13 @@ export const useGame = create<GameState>()(
           }
         },
 
+        setStudyText: (nodeId, text) =>
+          set((s) => ({ study: { nodeId, text, done: s.study.nodeId === nodeId && s.study.done } })),
+
+        finishStudy: (nodeId) => set((s) => ({
+          study: { nodeId, text: s.study.nodeId === nodeId ? s.study.text : '', done: true },
+        })),
+
         continueAfterEnd: () => {
           const r = get().result
           if (r?.isProject) set({ projectUnit: r.unitId, screen: 'project' })
@@ -376,6 +394,7 @@ export const useGame = create<GameState>()(
         obStep: s.obStep,
         draft: s.draft,
         ui: s.ui,
+        study: s.study,
         result: s.result,
         projectUnit: s.projectUnit,
         codeSentAt: s.codeSentAt,
