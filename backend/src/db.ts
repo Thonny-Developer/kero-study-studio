@@ -67,7 +67,8 @@ const SCHEMA = [
     checked INTEGER NOT NULL DEFAULT 0,
     feedback TEXT,
     answer TEXT,
-    sb_prompt TEXT
+    sb_prompt TEXT,
+    queue TEXT
   )`,
   // Артефакты, которые AI собрал по промпту юзера в проекте юнита
   `CREATE TABLE IF NOT EXISTS projects (
@@ -126,6 +127,8 @@ export function ready() {
     await c.batch(SCHEMA, 'write')
     const cols = new Set((await c.execute('PRAGMA table_info(users)')).rows.map((r) => String(r.name)))
     for (const [name, type] of USER_COLUMNS) if (!cols.has(name)) await c.execute(`ALTER TABLE users ADD COLUMN ${name} ${type}`)
+    const activeCols = new Set((await c.execute('PRAGMA table_info(active_lessons)')).rows.map((r) => String(r.name)))
+    if (!activeCols.has('queue')) await c.execute('ALTER TABLE active_lessons ADD COLUMN queue TEXT')
     await c.execute('CREATE UNIQUE INDEX IF NOT EXISTS users_email ON users(email_key)')
   })()
   return migrated

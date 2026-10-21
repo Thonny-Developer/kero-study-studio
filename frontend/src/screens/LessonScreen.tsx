@@ -74,7 +74,7 @@ export function LessonScreen() {
         <button type="button" onClick={quitLesson} aria-label="Выйти из урока" className="grid h-9 w-9 place-items-center text-ink-3">
           <Icon name="x" size={22} />
         </button>
-        <ProgressBar value={(l.idx + (l.checked ? 1 : 0)) / l.total} />
+        <ProgressBar value={l.got / l.total} />
         <motion.div key={hearts} initial={{ scale: 1.4 }} animate={{ scale: 1 }} className="flex items-center gap-[5px] text-base font-extrabold">
           <span className="text-err">
             <Icon name="heart" size={22} />
@@ -93,9 +93,12 @@ export function LessonScreen() {
           className="no-scrollbar flex flex-1 flex-col gap-[18px] overflow-y-auto px-5 pb-6 pt-3.5 [&>*]:shrink-0"
         >
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-1.5 font-mono text-xs font-bold uppercase tracking-[.08em] text-acc-ink">
-              <Icon name={META[task.type].icon} size={14} />
-              {taskLabel(task)}
+            <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[.08em] text-acc-ink">
+              <span className="flex items-center gap-1.5">
+                <Icon name={META[task.type].icon} size={14} />
+                {taskLabel(task)}
+              </span>
+              {l.idx >= l.total && <span className="rounded-md bg-err-soft px-2 py-0.5 text-[10.5px] text-err-ink">Работа над ошибками</span>}
             </div>
             <div className="text-pretty font-display text-[22px] font-bold leading-[1.2] tracking-[-.025em]">{task.title}</div>
           </div>

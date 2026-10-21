@@ -37,7 +37,7 @@ export function NoHeartsScreen() {
         <div className="max-w-[290px] text-pretty text-[15.5px] leading-[1.45] text-ink-2">
           {back
             ? 'Можно продолжать. Не торопись с ответом — читай задание до конца.'
-            : 'Ошибаться нормально — так и учатся. Подожди, пока сердечко восстановится, или пройди урок заново.'}
+            : 'Ошибаться нормально — так и учатся. Подожди, пока сердечко восстановится по таймеру.'}
         </div>
         <div className="flex gap-1.5">
           {Array.from({ length: me?.maxHearts ?? 5 }, (_, i) => (
@@ -55,9 +55,15 @@ export function NoHeartsScreen() {
       </div>
       <div className="flex flex-col gap-3.5">
         {back ? (
-          <Button onClick={() => go('lesson')}>Продолжить урок</Button>
+          <>
+            <Button onClick={() => go('lesson')}>Продолжить урок</Button>
+            <Button variant="secondary" onClick={retryLesson}>
+              <Icon name="refresh" size={20} />
+              Повторить урок
+            </Button>
+          </>
         ) : (
-          <Button variant="err" onClick={retryLesson}>
+          <Button variant="err" disabled>
             <Icon name="refresh" size={20} />
             Повторить урок
           </Button>

@@ -44,6 +44,7 @@ interface ActiveRow {
   feedback: string | null
   answer: string | null
   sb_prompt: string | null
+  queue: string | null
 }
 
 interface Answer {
@@ -114,9 +115,23 @@ function liveStreak(u: UserRow, today: string) {
   return u.last_day === today || u.last_day === shiftDay(today, -1) ? u.streak : 0
 }
 
+function taskQueue(a: ActiveRow, lesson: LessonNode): number[] {
+  if (a.queue) {
+    try {
+      const parsed = JSON.parse(a.queue)
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+    } catch {
+      /* fallback */
+    }
+  }
+  return Array.from({ length: lesson.tasks.length }, (_, i) => i)
+}
+
 function lessonView(a: ActiveRow) {
   const { f, lesson } = lessonOf(a.node_id)
-  const task = lesson.tasks[a.idx]
+  const queue = taskQueue(a, lesson)
+  const taskIdx = queue[a.idx] ?? 0
+  const task = lesson.tasks[taskIdx] ?? lesson.tasks[0]
   return {
     nodeId: a.node_id,
     name: lesson.name,
@@ -219,6 +234,14 @@ export async function openNode(u: UserRow, nodeId: string): Promise<OpenResult> 
   if (f.node.kind === 'project' && isDone) return { open: 'project', unitId: f.unit.id }
 
   await syncHearts(u)
+  if (u.hearts <= 0) {
+    const existing = await one<ActiveRow>('SELECT * FROM active_lessons WHERE user_id = ?', [u.id])
+    if (!existing) {
+      await run('INSERT INTO active_lessons (user_id, node_id, started_at) VALUES (?, ?, ?)', [u.id, nodeId, Date.now()])
+    }
+    await run('UPDATE users SET track = ? WHERE id = ?', [f.track, u.id])
+    return { open: 'noHearts' }
+  }
   await db().batch(
     [
       { sql: 'INSERT OR REPLACE INTO active_lessons (user_id, node_id, started_at) VALUES (?, ?, ?)', args: [u.id, nodeId, Date.now()] },
@@ -226,7 +249,7 @@ export async function openNode(u: UserRow, nodeId: string): Promise<OpenResult> 
     ],
     'write',
   )
-  return { open: u.hearts <= 0 ? 'noHearts' : 'lesson' }
+  return { open: 'lesson' }
 }
 
 /* ---------- Урок ---------- */
@@ -235,11 +258,13 @@ async function activeOf(u: UserRow) {
   const a = await one<ActiveRow>('SELECT * FROM active_lessons WHERE user_id = ?', [u.id])
   if (!a) throw new HttpError(409, 'Нет активного урока', 'no-lesson')
   const { f, lesson } = lessonOf(a.node_id)
-  return { a, f, lesson, task: lesson.tasks[a.idx] as Task }
+  const queue = taskQueue(a, lesson)
+  const taskIdx = queue[a.idx] ?? 0
+  return { a, f, lesson, queue, taskIdx, task: (lesson.tasks[taskIdx] ?? lesson.tasks[0]) as Task }
 }
 
 export async function answer(u: UserRow, body: Answer) {
-  const { a, task } = await activeOf(u)
+  const { a, task, queue, taskIdx } = await activeOf(u)
   if (a.checked) throw new HttpError(409, 'Ответ уже проверен', 'checked')
   if (task.type === 'sb') throw bad('Это задание оценивает AI')
   await syncHearts(u)
@@ -267,6 +292,7 @@ export async function answer(u: UserRow, body: Answer) {
   else fb.correctIndex = task.correct
 
   const hearts = ok ? u.hearts : u.hearts - 1
+  const nextQueue = ok ? queue : [...queue, taskIdx]
   await db().batch(
     [
       {
@@ -274,8 +300,8 @@ export async function answer(u: UserRow, body: Answer) {
         args: [hearts, !ok && u.hearts_at === null ? Date.now() : u.hearts_at, ok && task.type === 'bug' ? 1 : 0, u.id],
       },
       {
-        sql: 'UPDATE active_lessons SET checked = 1, got = got + ?, mist = mist + ?, xp = xp + ?, feedback = ?, answer = ? WHERE user_id = ?',
-        args: [ok ? 1 : 0, ok ? 0 : 1, fb.xp, JSON.stringify(fb), JSON.stringify(given), u.id],
+        sql: 'UPDATE active_lessons SET checked = 1, got = got + ?, mist = mist + ?, xp = xp + ?, feedback = ?, answer = ?, queue = ? WHERE user_id = ?',
+        args: [ok ? 1 : 0, ok ? 0 : 1, fb.xp, JSON.stringify(fb), JSON.stringify(given), JSON.stringify(nextQueue), u.id],
       },
     ],
     'write',
@@ -300,7 +326,7 @@ function sbTitle(score: number) {
 }
 
 export async function sandbox(u: UserRow, prompt: unknown) {
-  const { a, f, task } = await activeOf(u)
+  const { a, f, task, queue, taskIdx } = await activeOf(u)
   if (a.checked) throw new HttpError(409, 'Ответ уже проверен', 'checked')
   if (task.type !== 'sb') throw bad('Это не песочница')
   if (typeof prompt !== 'string' || prompt.trim().length < 10) throw bad('Напиши промпт хотя бы в 10 символов')
@@ -317,22 +343,23 @@ export async function sandbox(u: UserRow, prompt: unknown) {
     score: grade.score,
     xp: ok ? sbXp(grade.score) : 0,
   }
+  const nextQueue = ok ? queue : [...queue, taskIdx]
   await run(
-    'UPDATE active_lessons SET checked = 1, got = got + ?, mist = mist + ?, xp = xp + ?, feedback = ?, answer = ?, sb_prompt = ? WHERE user_id = ? AND checked = 0',
-    [ok ? 1 : 0, ok ? 0 : 1, fb.xp, JSON.stringify(fb), JSON.stringify({ prompt: text }), text, u.id],
+    'UPDATE active_lessons SET checked = 1, got = got + ?, mist = mist + ?, xp = xp + ?, feedback = ?, answer = ?, sb_prompt = ?, queue = ? WHERE user_id = ? AND checked = 0',
+    [ok ? 1 : 0, ok ? 0 : 1, fb.xp, JSON.stringify(fb), JSON.stringify({ prompt: text }), text, JSON.stringify(nextQueue), u.id],
   )
 }
 
 export async function next(u: UserRow): Promise<{ result?: LessonResult; noHearts?: boolean }> {
-  const { a, f, lesson } = await activeOf(u)
+  const { a, f, lesson, queue } = await activeOf(u)
   if (!a.checked) throw new HttpError(409, 'Сначала проверь ответ', 'not-checked')
   await syncHearts(u)
-  if (u.hearts <= 0) return { noHearts: true }
 
-  if (a.idx + 1 < lesson.tasks.length) {
+  if (a.idx + 1 < queue.length) {
     await run('UPDATE active_lessons SET idx = idx + 1, checked = 0, feedback = NULL, answer = NULL WHERE user_id = ?', [u.id])
-    return {}
+    return u.hearts <= 0 ? { noHearts: true } : {}
   }
+  if (u.hearts <= 0) return { noHearts: true }
 
   // Урок закончен: начисляем XP, обновляем стрик, квест и проект
   const now = Date.now()
@@ -400,19 +427,13 @@ export async function quit(u: UserRow) {
   await run('DELETE FROM active_lessons WHERE user_id = ?', [u.id])
 }
 
-/** «Повторить урок» после потери всех сердечек: урок с начала и полный запас сердечек */
+/** «Повторить урок»: перезапускает урок с начала, но не восстанавливает сердечки — нужно дождаться таймера */
 export async function retry(u: UserRow) {
   const a = await one<ActiveRow>('SELECT * FROM active_lessons WHERE user_id = ?', [u.id])
   if (!a) throw new HttpError(409, 'Нет активного урока', 'no-lesson')
   await syncHearts(u)
-  if (u.hearts > 0) throw bad('Сердечки ещё есть — продолжай урок')
-  await db().batch(
-    [
-      { sql: 'UPDATE users SET hearts = ?, hearts_at = NULL WHERE id = ?', args: [MAX_HEARTS, u.id] },
-      { sql: 'INSERT OR REPLACE INTO active_lessons (user_id, node_id, started_at) VALUES (?, ?, ?)', args: [u.id, a.node_id, Date.now()] },
-    ],
-    'write',
-  )
+  if (u.hearts <= 0) throw new HttpError(409, 'Сердечки закончились — подожди восстановления по таймеру', 'no-hearts')
+  await run('INSERT OR REPLACE INTO active_lessons (user_id, node_id, started_at) VALUES (?, ?, ?)', [u.id, a.node_id, Date.now()])
 }
 
 /* ---------- Лига ---------- */
