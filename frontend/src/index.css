@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Токены из макета. Tailwind ссылается на них через var(--…) */
+:root {
+  --code: #7a5cff; --codeSh: #5b3fe0; --mkt: #f25a35; --mktSh: #c8401c;
+  --ok: #16a34a; --okSh: #0f7a37; --err: #ef3e58; --errSh: #bf2640; --gold: #ffb21e; --goldSh: #d98e00;
+  --term: #16141d; --termLine: #2a2733;
+  --bg: #f6f5f9; --sf: #ffffff; --sf2: #eeecf3; --ink: #16141d; --ink2: #5e5a6c; --ink3: #9a96a8;
+  --line: #e3e0ea; --lockSh: #d3cfdc; --page: #e4e2ea;
+  --codeSoft: #eeeaff; --mktSoft: #ffebe4; --okSoft: #e2f7ea; --errSoft: #ffe6ea; --goldSoft: #fff3d6;
+  --okInk: #0e7f3f; --errInk: #c42840; --codeInk: #5b3fe0; --mktInk: #c8401c; --goldInk: #8a5a00;
+
+  /* отступы под статус-бар и home-индикатор: в рамке телефона — как в макете, на реальном телефоне — safe-area */
+  --top: max(env(safe-area-inset-top), 14px);
+  --bottom: max(env(safe-area-inset-bottom), 16px);
+}
+[data-theme='dark'] {
+  --bg: #0f0e14; --sf: #1a1822; --sf2: #25222e; --ink: #f3f1f8; --ink2: #a9a4b8; --ink3: #6f6a7e;
+  --line: #2f2b3a; --lockSh: #0a090d; --page: #08070b; --term: #0a090e; --termLine: #26232f;
+  --codeSoft: #251d4a; --mktSoft: #3a1c14; --okSoft: #0f2e1d; --errSoft: #3a1720; --goldSoft: #3a2c0a;
+  --okInk: #4ade80; --errInk: #ff7a8a; --codeInk: #a996ff; --mktInk: #ff8a6a; --goldInk: #ffc94d;
+}
+[data-track='code'] { --acc: var(--code); --accSh: var(--codeSh); --accSoft: var(--codeSoft); --accInk: var(--codeInk); }
+[data-track='mkt'] { --acc: var(--mkt); --accSh: var(--mktSh); --accSoft: var(--mktSoft); --accInk: var(--mktInk); }
+
+.phone-frame {
+  --top: 50px;
+  --bottom: 30px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: 'Onest', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+button {
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+button:disabled {
+  cursor: default;
+}
+textarea {
+  font-family: inherit;
+}
+
+@layer utilities {
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+}
