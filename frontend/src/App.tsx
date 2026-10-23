@@ -17,6 +17,7 @@ import { NoHeartsScreen } from './screens/NoHeartsScreen'
 import { Onboarding } from './screens/Onboarding'
 import { ProfileScreen } from './screens/ProfileScreen'
 import { ProjectScreen } from './screens/ProjectScreen'
+import { ShopScreen } from './screens/ShopScreen'
 import { VerifyScreen } from './screens/VerifyScreen'
 import { Welcome } from './screens/Welcome'
 import { useGame, type GameState, type Screen } from './store/game'
@@ -34,6 +35,7 @@ const SCREENS: Record<Screen, () => ReactNode> = {
   noHearts: NoHeartsScreen,
   project: ProjectScreen,
   league: LeagueScreen,
+  shop: ShopScreen,
   profile: ProfileScreen,
 }
 

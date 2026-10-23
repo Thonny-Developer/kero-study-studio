@@ -4,6 +4,7 @@ import { Icon, type IconName } from '../../lib/icons'
 const TABS: { screen: Screen; label: string; icon: IconName }[] = [
   { screen: 'map', label: 'Путь', icon: 'map' },
   { screen: 'league', label: 'Лиги', icon: 'league' },
+  { screen: 'shop', label: 'Магазин', icon: 'gift' },
   { screen: 'profile', label: 'Профиль', icon: 'user' },
 ]
 
@@ -12,7 +13,7 @@ export function TabBar() {
   const go = useGame((s) => s.go)
   return (
     <nav
-      className="absolute inset-x-0 bottom-0 z-10 grid grid-cols-3 border-t border-line bg-bg px-6 pt-2"
+      className="absolute inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t border-line bg-bg px-3 pt-2"
       style={{ paddingBottom: 'var(--bottom)' }}
     >
       {TABS.map((t) => {
@@ -35,4 +36,4 @@ export function TabBar() {
   )
 }
 
-export const TAB_SCREENS: Screen[] = ['map', 'league', 'profile']
+export const TAB_SCREENS: Screen[] = ['map', 'league', 'shop', 'profile']
