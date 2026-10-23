@@ -169,7 +169,7 @@ export function ExchangePanel({ shop, reload, onShop }: { shop: Shop | null; rel
   ]
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 desk:grid desk:grid-cols-[1.2fr_1fr] desk:items-start desk:gap-4">
       {/* курс и живой график */}
       <motion.section
         initial={{ opacity: 0, y: 12 }}

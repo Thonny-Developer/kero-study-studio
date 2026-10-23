@@ -1,3 +1,4 @@
+import plugin from 'tailwindcss/plugin'
 import type { Config } from 'tailwindcss'
 
 // Токены из макета Vibely. Значения живут в CSS-переменных (src/index.css),
@@ -75,5 +76,6 @@ export default {
       },
     },
   },
-  plugins: [],
+  // desk: — стили центральной колонки десктопа (AppShell вешает .desk)
+  plugins: [plugin(({ addVariant }) => addVariant('desk', '.desk &'))],
 } satisfies Config

@@ -112,7 +112,7 @@ export function App() {
   const tabbed = screen !== 'splash' && TAB_SCREENS.includes(screen)
 
   return (
-    <AppShell tabbed={tabbed} wide={screen === 'map'} nav={<SidePanel />} rail={<RightRail />} tabBar={<TabBar />}>
+    <AppShell tabbed={tabbed} wide={screen === 'map' || screen === 'shop'} nav={<SidePanel />} rail={<RightRail />} tabBar={<TabBar />}>
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.div
           key={tabbed ? `tab-${screen}` : screen}

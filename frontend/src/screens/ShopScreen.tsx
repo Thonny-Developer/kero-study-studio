@@ -510,7 +510,7 @@ function CatalogCard({ cat, index, onOpen }: { cat: (typeof CATALOG)[number]; in
       exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
       transition={{ type: 'spring', stiffness: 380, damping: 30, delay: index * 0.06 }}
       whileTap={{ y: 3, boxShadow: '0 0 0 transparent' }}
-      className="group flex items-center gap-3 rounded-card border-[1.5px] border-line bg-sf p-3 text-left shadow-btn-2"
+      className="group relative flex items-center gap-3 rounded-card border-[1.5px] border-line bg-sf p-3 text-left shadow-btn-2 desk:flex-col desk:items-start desk:p-4"
     >
       <motion.span
         className="grid h-14 w-14 shrink-0 place-items-center rounded-[18px]"
@@ -542,7 +542,7 @@ function CatalogCard({ cat, index, onOpen }: { cat: (typeof CATALOG)[number]; in
           </span>
         </span>
       </span>
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-sf2 text-ink-2 transition-transform group-hover:translate-x-0.5">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-sf2 text-ink-2 transition-transform group-hover:translate-x-0.5 desk:absolute desk:right-4 desk:top-4">
         <Icon name="back" size={16} className="rotate-180" />
       </span>
     </motion.button>
@@ -579,7 +579,7 @@ function ItemsPanel({ shop, onExchange, onShop }: { shop: Shop | null; onExchang
         ))}
       </div>
 
-      <div className="mt-3 flex flex-col gap-3">
+      <div className={`mt-3 grid gap-3 ${category === 'Каталог' ? 'desk:grid-cols-3' : 'desk:grid-cols-2'}`}>
         <AnimatePresence mode="popLayout">
           {category === 'Каталог'
             ? CATALOG.map((c, index) => <CatalogCard key={c.id} cat={c} index={index} onOpen={() => setCategory(c.id)} />)
@@ -609,7 +609,8 @@ export function ShopScreen() {
   return (
     <MotionConfig reducedMotion="user">
       <div className="absolute inset-0 flex flex-col" style={{ paddingTop: 'var(--top)' }}>
-        <div className="flex items-center justify-between border-b border-line bg-bg px-5 pb-3.5 pt-2">
+        <div className="border-b border-line bg-bg px-5 pb-3.5 pt-2 desk:px-8">
+          <div className="mx-auto flex w-full items-center justify-between desk:max-w-[920px]">
           <div className="desk-hide">
             <Logo size={21} />
           </div>
@@ -617,9 +618,12 @@ export function ShopScreen() {
           <div className="rail-hide">
             <StatsHeader shop />
           </div>
+          </div>
         </div>
 
-        <main className="no-scrollbar flex-1 overflow-y-auto overflow-x-hidden px-5 pb-[112px] pt-4">
+        <main className="no-scrollbar flex-1 overflow-y-auto overflow-x-hidden px-5 pb-[112px] pt-4 desk:px-8 desk:pb-10 desk:pt-6">
+          <div className="mx-auto w-full desk:max-w-[920px]">
+          <div className="desk:max-w-[360px]">
           <Segment
             id="shop-tab"
             value={tab}
@@ -629,6 +633,7 @@ export function ShopScreen() {
               ['exchange', 'Обменник'],
             ]}
           />
+          </div>
           <AnimatePresence mode="wait" initial={false} custom={dir}>
             <motion.div
               key={tab}
@@ -643,6 +648,7 @@ export function ShopScreen() {
               {tab === 'items' ? <ItemsPanel shop={shop} onExchange={() => setTab('exchange')} onShop={setShop} /> : <ExchangePanel shop={shop} reload={load} onShop={setShop} />}
             </motion.div>
           </AnimatePresence>
+          </div>
         </main>
       </div>
     </MotionConfig>
