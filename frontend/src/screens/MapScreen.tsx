@@ -82,6 +82,8 @@ function tip(node: NodeView) {
 export function MapScreen() {
   const track = useGame((s) => s.track)
   const units = useGame((s) => s.course?.tracks[track] ?? NO_UNITS)
+  // «Золотой Блинк» из магазина
+  const blinkColor = useGame((s) => (s.me?.owned.includes('blink') ? 'var(--gold)' : undefined))
   const done = useGame((s) => s.me?.done ?? NO_IDS)
   const openNode = useGame((s) => s.openNode)
 
@@ -158,7 +160,7 @@ export function MapScreen() {
                     </div>
                     {isCur && (
                       <div className="absolute bottom-0" style={x >= 0 ? { left: 22 } : { right: 22 }}>
-                        <Mascot size={60} />
+                        <Mascot size={60} color={blinkColor} />
                       </div>
                     )}
                   </div>
@@ -169,7 +171,7 @@ export function MapScreen() {
         })}
         {units.length > 0 && !cur && (
           <div className="mt-8 flex flex-col items-center gap-2 text-center">
-            <Mascot size={72} mood="happy" anim="jump" />
+            <Mascot size={72} mood="happy" anim="jump" color={blinkColor} />
             <div className="font-display text-lg font-bold">Трек пройден!</div>
             <div className="text-sm text-ink-2">Попробуй второй трек — там свои проекты.</div>
           </div>

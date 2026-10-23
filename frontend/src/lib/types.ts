@@ -54,6 +54,12 @@ export interface Me {
   isAdmin: boolean
   infiniteHearts: boolean
   xp: number
+  /** XP, которые ещё можно обменять на монеты */
+  xpBalance: number
+  coins: number
+  /** купленное оформление */
+  owned: ShopItemId[]
+  doubleXpUntil: number | null
   weekXp: number
   hearts: number
   heartsAt: number | null
@@ -83,6 +89,7 @@ export interface LessonResult {
   flawlessBonus: number
   questBonus: number
   projectBonus: number
+  boostBonus: number
   accuracy: number
   timeMs: number
   streak: number
@@ -132,4 +139,17 @@ export interface Project {
   output: string | null
   model: string | null
   updatedAt: number
+}
+
+export type ShopItemId = 'heart' | 'double' | 'blink' | 'frame'
+
+/** Курс монеты в XP и цены товаров */
+export interface Shop {
+  price: number
+  /** изменение за сутки, % */
+  change: number
+  nextAt: number
+  day: [number, number][]
+  week: [number, number][]
+  items: Record<ShopItemId, number>
 }

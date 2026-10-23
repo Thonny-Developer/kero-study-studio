@@ -9,6 +9,7 @@ import { env } from './env.js'
 import { bad, HttpError } from './http.js'
 import { buildArtifact, gradePrompt } from './mistral.js'
 import { dayKey, shiftDay, weekday, weekKey } from './time.js'
+import { ownedItems } from './shop.js'
 import { publicTask, type PublicTask } from './views.js'
 
 export const MAX_HEARTS = 5
@@ -64,6 +65,7 @@ export interface LessonResult {
   flawlessBonus: number
   questBonus: number
   projectBonus: number
+  boostBonus: number
   accuracy: number
   timeMs: number
   streak: number
@@ -79,7 +81,7 @@ function lessonOf(nodeId: string) {
 
 /* ---------- Сердечки ---------- */
 
-async function syncHearts(u: UserRow) {
+export async function syncHearts(u: UserRow) {
   if (u.infinite_hearts) {
     if (u.hearts !== MAX_HEARTS || u.hearts_at !== null) {
       await run('UPDATE users SET hearts = ?, hearts_at = NULL WHERE id = ?', [MAX_HEARTS, u.id])
@@ -173,7 +175,7 @@ export async function getState(stale: UserRow) {
   await syncHearts(u)
   const today = dayKey(u.tz)
   const week = weekKey(today)
-  const [{ runs, done }, totals, active, projects, quest] = await Promise.all([
+  const [{ runs, done }, totals, active, projects, quest, owned] = await Promise.all([
     progress(u.id),
     one<{ xp: number; week_xp: number }>(
       'SELECT COALESCE(SUM(amount), 0) AS xp, COALESCE(SUM(CASE WHEN week = ? THEN amount END), 0) AS week_xp FROM xp_events WHERE user_id = ?',
@@ -185,6 +187,7 @@ export async function getState(stale: UserRow) {
       [u.id],
     ),
     one("SELECT 1 FROM xp_events WHERE user_id = ? AND reason = 'quest' AND day = ?", [u.id, today]),
+    ownedItems(u.id),
   ])
 
   const units: Record<string, { lessons: number; tasks: number; xp: number }> = {}
@@ -204,6 +207,10 @@ export async function getState(stale: UserRow) {
     isAdmin: !!u.email_verified && env.adminEmails.includes((u.email ?? '').trim().toLowerCase()),
     infiniteHearts: !!u.infinite_hearts,
     xp: Number(totals?.xp ?? 0),
+    xpBalance: Math.max(0, Number(totals?.xp ?? 0) - u.xp_spent),
+    coins: u.coins,
+    owned,
+    doubleXpUntil: (u.double_xp_until ?? 0) > Date.now() ? u.double_xp_until : null,
     weekXp: Number(totals?.week_xp ?? 0),
     hearts: u.hearts,
     heartsAt: u.hearts_at,
@@ -393,7 +400,9 @@ export async function next(u: UserRow): Promise<{ result?: LessonResult; noHeart
   const flawlessBonus = a.mist === 0 ? XP_FLAWLESS : 0
   const questBonus = !questDone && lessonsToday >= QUEST_GOAL ? XP_QUEST : 0
   const projectBonus = isProject && firstTime ? XP_PROJECT : 0
-  const earned = base + flawlessBonus + questBonus + projectBonus
+  // Двойной XP из магазина удваивает всё, что заработано за урок
+  const boostBonus = (u.double_xp_until ?? 0) > now ? base + flawlessBonus + questBonus + projectBonus : 0
+  const earned = base + flawlessBonus + questBonus + projectBonus + boostBonus
 
   let streak = u.streak
   if (u.last_day !== today) streak = u.last_day === shiftDay(today, -1) ? u.streak + 1 : 1
@@ -414,6 +423,7 @@ export async function next(u: UserRow): Promise<{ result?: LessonResult; noHeart
   if (flawlessBonus) stmts.push(xpRow(flawlessBonus, 'flawless'))
   if (questBonus) stmts.push(xpRow(questBonus, 'quest'))
   if (projectBonus) stmts.push(xpRow(projectBonus, 'project'))
+  if (boostBonus) stmts.push(xpRow(boostBonus, 'boost'))
   // Промпт из финальной песочницы проекта — по нему AI соберёт артефакт. Повторное прохождение пересобирает проект.
   if (isProject && a.sb_prompt) {
     stmts.push({
@@ -434,6 +444,7 @@ export async function next(u: UserRow): Promise<{ result?: LessonResult; noHeart
       flawlessBonus,
       questBonus,
       projectBonus,
+      boostBonus,
       accuracy: Math.round((a.got / Math.max(1, a.got + a.mist)) * 100),
       timeMs: now - a.started_at,
       streak,

@@ -20,6 +20,9 @@ export interface UserRow {
   hearts: number
   hearts_at: number | null
   infinite_hearts: number
+  coins: number
+  xp_spent: number
+  double_xp_until: number | null
   streak: number
   max_streak: number
   last_day: string | null

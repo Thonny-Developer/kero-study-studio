@@ -44,6 +44,7 @@ export function EndScreen() {
     result.flawlessBonus && `без ошибок +${result.flawlessBonus}`,
     result.questBonus && `квест дня +${result.questBonus}`,
     result.projectBonus && `проект +${result.projectBonus}`,
+    result.boostBonus && `двойной XP +${result.boostBonus}`,
   ].filter(Boolean)
 
   const tiles: { label: string; value: string; icon: IconName; c: string; ink: string }[] = [

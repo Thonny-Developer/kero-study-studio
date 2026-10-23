@@ -146,7 +146,9 @@ export function ProfileScreen() {
     <div className="no-scrollbar absolute inset-0 overflow-y-auto" style={{ paddingTop: 'var(--top)' }}>
       <div className="flex flex-col gap-[18px] px-5 pb-[120px] pt-3">
         <div className="flex items-center gap-3.5">
-          <div className="grid h-[72px] w-[72px] shrink-0 place-items-center rounded-[24px] bg-acc font-display text-2xl font-extrabold text-white shadow-btn-acc">
+          <div
+            className={`grid h-[72px] w-[72px] shrink-0 place-items-center rounded-[24px] bg-acc font-display text-2xl font-extrabold text-white shadow-btn-acc ${me.owned.includes('frame') ? 'outline outline-[3px] outline-offset-[3px] outline-gold' : ''}`}
+          >
             {initials(me.user.name) || '?'}
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-[3px]">

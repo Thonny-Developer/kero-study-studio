@@ -10,6 +10,7 @@ import { answer, buildProject, getProject, getState, league, next, openNode, qui
 import { bad, HttpError } from './http.js'
 import { projectPage } from './page.js'
 import { confirmLink, confirmVerification, finishReset, normEmail, sendReset, sendVerification } from './email.js'
+import { buy, exchange, shopView } from './shop.js'
 import { courseView } from './views.js'
 
 export const app = express()
@@ -193,6 +194,22 @@ app.post('/api/lesson/quit', requireUser, async (req, res) => {
 
 app.post('/api/lesson/retry', requireUser, async (req, res) => {
   await retry(user(req))
+  res.json({ state: await getState(user(req)) })
+})
+
+/* ---------- Магазин ---------- */
+
+app.get('/api/shop', requireUser, (_req, res) => {
+  res.json(shopView())
+})
+
+app.post('/api/shop/exchange', requireUser, async (req, res) => {
+  const r = await exchange(user(req), req.body ?? {})
+  res.json({ ...r, state: await getState(user(req)) })
+})
+
+app.post('/api/shop/buy', requireUser, async (req, res) => {
+  await buy(user(req), req.body?.item)
   res.json({ state: await getState(user(req)) })
 })
 

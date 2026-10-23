@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
 import { api, ApiError, onUnauthorized, setToken } from '../lib/api'
-import type { Course, LessonResult, LessonView, Me, Track } from '../lib/types'
+import type { Course, LessonResult, LessonView, Me, ShopItemId, Track } from '../lib/types'
 import { toast } from './toast'
 
 // Вся игровая логика (XP, сердечки, стрик, проверка ответов) — на бэкенде. Здесь только UI-состояние.
@@ -71,6 +71,9 @@ interface Actions {
   rename: (name: string) => Promise<boolean>
   setTrack: (t: Track) => void
   toggleInfiniteHearts: (enabled: boolean) => Promise<void>
+  /** Обмен XP → монеты; 'price-changed' — курс сменился, пока юзер смотрел */
+  exchange: (coins: number, price: number) => Promise<boolean | 'price-changed'>
+  buy: (item: ShopItemId) => Promise<boolean>
   openNode: (id: string) => Promise<void>
   openProject: (unitId: string) => void
   select: (i: number) => void
@@ -288,6 +291,34 @@ export const useGame = create<GameState>()(
             applyMe(await api<Me>('/api/admin/infinite-hearts', { body: { enabled } }))
           } catch (e) {
             fail(e)
+          } finally {
+            set({ busy: false })
+          }
+        },
+
+        exchange: async (coins, price) => {
+          if (get().busy) return false
+          set({ busy: true })
+          try {
+            applyMe((await api<{ state: Me }>('/api/shop/exchange', { body: { coins, price } })).state)
+            return true
+          } catch (e) {
+            fail(e)
+            return e instanceof ApiError && e.code === 'price-changed' ? 'price-changed' : false
+          } finally {
+            set({ busy: false })
+          }
+        },
+
+        buy: async (item) => {
+          if (get().busy) return false
+          set({ busy: true })
+          try {
+            applyMe((await api<{ state: Me }>('/api/shop/buy', { body: { item } })).state)
+            return true
+          } catch (e) {
+            fail(e)
+            return false
           } finally {
             set({ busy: false })
           }

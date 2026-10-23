@@ -98,6 +98,18 @@ const SCHEMA = [
     used_at INTEGER
   )`,
   `CREATE INDEX IF NOT EXISTS email_codes_user ON email_codes(user_id, purpose)`,
+  // Операции с монетами: обмен XP (amount > 0) и покупки в магазине (amount < 0)
+  `CREATE TABLE IF NOT EXISTS coin_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    xp INTEGER NOT NULL DEFAULT 0,
+    price REAL,
+    item TEXT,
+    created_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS coin_events_user ON coin_events(user_id)`,
 ]
 
 // Колонки, добавленные после первого релиза: ALTER для уже существующих баз
@@ -106,6 +118,9 @@ const USER_COLUMNS: [string, string][] = [
   ['email_key', 'TEXT'],
   ['email_verified', 'INTEGER NOT NULL DEFAULT 0'],
   ['infinite_hearts', 'INTEGER NOT NULL DEFAULT 0'],
+  ['coins', 'INTEGER NOT NULL DEFAULT 0'],
+  ['xp_spent', 'INTEGER NOT NULL DEFAULT 0'],
+  ['double_xp_until', 'INTEGER'],
 ]
 
 let client: Client | null = null

@@ -1,16 +1,23 @@
 import { AnimatePresence, motion, MotionConfig, useAnimationControls } from 'framer-motion'
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { ExchangePanel } from '../components/shop/ExchangePanel'
+import { AnimatedNumber } from '../components/ui/AnimatedNumber'
+import { Coin } from '../components/ui/Coin'
 import { Logo } from '../components/ui/Logo'
 import { StatsHeader } from '../components/ui/StatsHeader'
+import { api } from '../lib/api'
 import { plural } from '../lib/date'
 import { Icon, type IconName } from '../lib/icons'
-import { toast } from '../store/toast'
+import type { Shop, ShopItemId } from '../lib/types'
+import { useGame } from '../store/game'
 
+type Tab = 'items' | 'exchange'
 type Category = 'Всё' | 'Усилители' | 'Оформление'
 
 const CATEGORIES: Category[] = ['Всё', 'Усилители', 'Оформление']
 
 interface Item {
+  id: ShopItemId
   name: string
   description: string
   category: Exclude<Category, 'Всё'>
@@ -22,8 +29,9 @@ interface Item {
 
 const ITEMS: Item[] = [
   {
+    id: 'heart',
     name: 'Запасное сердце',
-    description: 'Ещё одна попытка, если ответ окажется неверным.',
+    description: 'Сразу +1 сердечко, не дожидаясь восстановления.',
     category: 'Усилители',
     icon: 'heart',
     color: 'var(--err)',
@@ -31,17 +39,19 @@ const ITEMS: Item[] = [
     tag: 'Для уроков',
   },
   {
+    id: 'double',
     name: 'Двойной XP',
-    description: 'Больше опыта за каждый пройденный урок.',
+    description: '30 минут весь опыт за уроки удваивается.',
     category: 'Усилители',
     icon: 'bolt',
     color: 'var(--goldInk)',
     soft: 'var(--goldSoft)',
-    tag: 'На время',
+    tag: 'На 30 минут',
   },
   {
-    name: 'Образ Блинка',
-    description: 'Новый наряд для спутника на карте пути.',
+    id: 'blink',
+    name: 'Золотой Блинк',
+    description: 'Золотой окрас для спутника на карте пути.',
     category: 'Оформление',
     icon: 'spark',
     color: 'var(--codeInk)',
@@ -49,8 +59,9 @@ const ITEMS: Item[] = [
     tag: 'Для Блинка',
   },
   {
-    name: 'Рамка профиля',
-    description: 'Добавь яркий акцент к своей карточке профиля.',
+    id: 'frame',
+    name: 'Золотая рамка',
+    description: 'Яркая рамка вокруг аватара в профиле.',
     category: 'Оформление',
     icon: 'star',
     color: 'var(--mktInk)',
@@ -59,42 +70,75 @@ const ITEMS: Item[] = [
   },
 ]
 
-// искры вокруг подарка в шапке: позиция, размер, задержка
-const SPARKS: [number, number, number, number][] = [
-  [8, 14, 13, 0],
-  [80, 4, 10, 0.7],
-  [92, 70, 12, 1.3],
-]
+// панели выезжают в сторону переключения вкладки
+const SLIDE = {
+  enter: (dir: number) => ({ opacity: 0, x: dir * 24 }),
+  center: { opacity: 1, x: 0 },
+  exit: (dir: number) => ({ opacity: 0, x: -dir * 24 }),
+}
 
-function Hero() {
+const mmss = (ms: number) => {
+  const s = Math.max(0, Math.ceil(ms / 1000))
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
+function Segment<T extends string>({ id, value, options, onChange }: { id: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
+  return (
+    <div className="flex gap-1 rounded-tile bg-sf2 p-1" role="tablist">
+      {options.map(([v, label]) => {
+        const on = value === v
+        return (
+          <button
+            key={v}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            onClick={() => onChange(v)}
+            className={`relative flex-1 rounded-[10px] py-2 text-[13px] font-bold transition-colors ${on ? 'text-ink' : 'text-ink-2'}`}
+          >
+            {on && <motion.span layoutId={id} className="absolute inset-0 rounded-[10px] bg-sf shadow-seg" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+            <span className="relative">{label}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/** Кошелёк: баланс монет и переход в обменник */
+function Wallet({ onExchange }: { onExchange: () => void }) {
+  const coins = useGame((s) => s.me?.coins ?? 0)
+  const xp = useGame((s) => s.me?.xpBalance ?? 0)
   return (
     <motion.section
       initial={{ opacity: 0, scale: 0.96, y: 10 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-      className="relative overflow-hidden rounded-unit bg-acc py-4 pl-4 pr-[118px] text-white shadow-unit-acc"
+      className="relative overflow-hidden rounded-unit bg-acc py-4 pl-4 pr-[112px] text-white shadow-unit-acc"
     >
-      <div className="pointer-events-none absolute -bottom-10 -right-6 h-32 w-32 rounded-full bg-white/[.08]" />
-      <div className="absolute right-4 top-1/2 h-[92px] w-[92px] -translate-y-1/2">
+      <div className="pointer-events-none absolute -bottom-12 -right-8 h-36 w-36 rounded-full bg-white/[.08]" />
+      <div className="absolute right-5 top-1/2 -translate-y-1/2 [perspective:400px]">
         <motion.div
-          className="grid h-full w-full place-items-center rounded-[28px] bg-white/[.16]"
-          initial={{ rotate: -20, scale: 0.6, opacity: 0 }}
-          animate={{ rotate: 8, scale: 1, opacity: 1, y: [0, -6, 0] }}
+          initial={{ scale: 0.4, opacity: 0, y: 0 }}
+          animate={{ scale: 1, opacity: 1, y: [0, -6, 0], rotateY: [0, 0, 360] }}
           transition={{
-            rotate: { type: 'spring', stiffness: 180, damping: 12, delay: 0.1 },
-            scale: { type: 'spring', stiffness: 180, damping: 12, delay: 0.1 },
+            scale: { type: 'spring', stiffness: 200, damping: 12, delay: 0.1 },
             opacity: { duration: 0.2, delay: 0.1 },
-            y: { duration: 2.6, repeat: Infinity, ease: 'easeInOut', delay: 0.6 },
+            y: { duration: 2.6, repeat: Infinity, ease: 'easeInOut' },
+            rotateY: { duration: 4.5, times: [0, 0.7, 1], repeat: Infinity, ease: 'easeInOut', delay: 0.8 },
           }}
         >
-          <Icon name="gift" size={52} />
+          <Coin size={76} className="drop-shadow-[0_6px_10px_rgba(0,0,0,.18)]" />
         </motion.div>
-        {SPARKS.map(([x, y, s, d]) => (
+        {[
+          [-14, -8, 12, 0],
+          [70, -14, 10, 0.8],
+          [74, 62, 11, 1.4],
+        ].map(([x, y, s, d]) => (
           <motion.span
             key={d}
-            className="absolute text-white"
-            style={{ left: `${x}%`, top: `${y}%` }}
-            initial={{ scale: 0, opacity: 0 }}
+            className="absolute"
+            style={{ left: x, top: y }}
             animate={{ scale: [0, 1, 0], opacity: [0, 1, 0], rotate: [0, 90] }}
             transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 0.9, delay: 0.5 + d }}
           >
@@ -103,142 +147,184 @@ function Hero() {
         ))}
       </div>
 
-      <div className="font-mono text-[10.5px] font-bold tracking-[.12em] text-white/75">VIBELY · SHOP</div>
-      <h1 className="mt-1.5 font-display text-[20px] font-extrabold leading-[1.12] tracking-[-.03em]">Бонусы для прогресса</h1>
-      <p className="mt-1.5 text-[12.5px] leading-[1.4] text-white/85">Усилители уроков и новые образы для Блинка.</p>
-      <div className="mt-3 inline-flex items-center gap-1.5 rounded-[10px] bg-white/[.18] px-2.5 py-1 text-[11.5px] font-bold">
-        <motion.span animate={{ rotate: 360 }} transition={{ duration: 6, repeat: Infinity, ease: 'linear' }} className="grid">
-          <Icon name="spark" size={13} />
-        </motion.span>
-        Скоро в продаже
+      <div className="font-mono text-[10.5px] font-bold tracking-[.12em] text-white/75">ТВОИ МОНЕТЫ</div>
+      <div className="mt-1 font-display text-[34px] font-extrabold leading-none tracking-[-.04em]">
+        <AnimatedNumber value={coins} />
       </div>
+      <div className="mt-1.5 text-[12.5px] text-white/85">
+        Для обмена: {xp.toLocaleString('ru-RU')} XP
+      </div>
+      <motion.button
+        type="button"
+        whileTap={{ scale: 0.94 }}
+        onClick={onExchange}
+        className="mt-3 inline-flex items-center gap-1.5 rounded-[10px] bg-white/[.2] px-2.5 py-1.5 text-[12px] font-bold"
+      >
+        <Icon name="refresh" size={13} />
+        Обменять XP
+      </motion.button>
     </motion.section>
   )
 }
 
-function Tabs({ value, onChange }: { value: Category; onChange: (c: Category) => void }) {
-  return (
-    <div className="mt-3 flex gap-1 rounded-tile bg-sf2 p-1" role="tablist" aria-label="Категории магазина">
-      {CATEGORIES.map((c) => {
-        const on = value === c
-        return (
-          <button
-            key={c}
-            type="button"
-            role="tab"
-            aria-selected={on}
-            onClick={() => onChange(c)}
-            className={`relative flex-1 rounded-[10px] py-2 text-[13px] font-bold transition-colors ${on ? 'text-ink' : 'text-ink-2'}`}
-          >
-            {on && (
-              <motion.span
-                layoutId="shop-tab"
-                className="absolute inset-0 rounded-[10px] bg-sf shadow-seg"
-                transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-              />
-            )}
-            <span className="relative">{c}</span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-function ItemCard({ item, index }: { item: Item; index: number }) {
+function ItemCard({ item, index, price }: { item: Item; index: number; price: number | undefined }) {
+  const coins = useGame((s) => s.me?.coins ?? 0)
+  const owned = useGame((s) => s.me?.owned.includes(item.id) ?? false)
+  const doubleUntil = useGame((s) => (item.id === 'double' ? s.me?.doubleXpUntil : null) ?? null)
+  const busy = useGame((s) => s.busy)
+  const buy = useGame((s) => s.buy)
   const icon = useAnimationControls()
-  const tap = () => {
-    icon.start({ rotate: [0, -14, 12, -8, 5, 0], scale: [1, 1.12, 1], transition: { duration: 0.5 } })
-    toast(`«${item.name}» появится в магазине совсем скоро`)
+  const btn = useAnimationControls()
+  const [now, setNow] = useState(Date.now)
+
+  useEffect(() => {
+    if (!doubleUntil) return
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [doubleUntil])
+
+  const active = !!doubleUntil && doubleUntil > now
+  const affordable = price !== undefined && coins >= price
+
+  const tap = async () => {
+    if (owned || busy || price === undefined) return
+    if (!affordable) {
+      btn.start({ x: [0, -6, 6, -4, 4, 0], transition: { duration: 0.35 } })
+      return
+    }
+    if (await buy(item.id)) icon.start({ rotate: [0, -14, 12, -8, 5, 0], scale: [1, 1.25, 1], transition: { duration: 0.55 } })
   }
 
   return (
-    <motion.button
+    <motion.div
       layout
-      type="button"
-      onClick={tap}
       initial={{ opacity: 0, y: 14, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
       transition={{ type: 'spring', stiffness: 380, damping: 30, delay: index * 0.05 }}
-      whileTap={{ y: 4, boxShadow: '0 0 0 transparent' }}
-      className="flex w-full items-center gap-3 rounded-card border-[1.5px] border-line bg-sf p-3 text-left shadow-btn-2"
+      className="flex items-center gap-3 rounded-card border-[1.5px] border-line bg-sf p-3 shadow-btn-2"
     >
-      <motion.div
-        animate={icon}
-        className="grid h-14 w-14 shrink-0 place-items-center rounded-[18px]"
-        style={{ background: item.soft, color: item.color }}
-      >
+      <motion.div animate={icon} className="relative grid h-14 w-14 shrink-0 place-items-center rounded-[18px]" style={{ background: item.soft, color: item.color }}>
         <Icon name={item.icon} size={28} />
+        {active && (
+          <motion.span
+            className="absolute inset-0 rounded-[18px] border-2 border-gold"
+            animate={{ opacity: [1, 0.3, 1] }}
+            transition={{ duration: 1.4, repeat: Infinity }}
+          />
+        )}
       </motion.div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <span className="truncate font-mono text-[9.5px] font-bold tracking-[.06em] text-ink-3">{item.tag.toUpperCase()}</span>
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-sf2 px-1.5 py-0.5 font-mono text-[9.5px] font-bold text-ink-3">
-            <Icon name="lock" size={10} />
-            СКОРО
-          </span>
-        </div>
+        <span className="font-mono text-[9.5px] font-bold tracking-[.06em] text-ink-3">{item.tag.toUpperCase()}</span>
         <h3 className="mt-0.5 text-[14.5px] font-extrabold leading-tight text-ink">{item.name}</h3>
         <p className="mt-0.5 text-[12px] leading-[1.35] text-ink-2">{item.description}</p>
+        {active && <div className="mt-1 font-mono text-[10.5px] font-bold text-gold-ink">АКТИВЕН · {mmss(doubleUntil - now)}</div>}
       </div>
-    </motion.button>
+      {owned ? (
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-ok-soft px-2.5 py-2 text-[12px] font-extrabold text-ok-ink">
+          <Icon name="check" size={14} />
+          Есть
+        </span>
+      ) : (
+        <motion.button
+          type="button"
+          animate={btn}
+          whileTap={affordable ? { y: 3, boxShadow: '0 0 0 transparent' } : undefined}
+          onClick={tap}
+          disabled={price === undefined}
+          className={`inline-flex shrink-0 items-center gap-1 rounded-xl px-2.5 py-2 text-[14px] font-extrabold ${affordable ? 'bg-gold-soft text-gold-ink shadow-[0_3px_0_var(--goldSh)]' : 'bg-sf2 text-ink-3'}`}
+        >
+          <Coin size={17} className={affordable ? '' : 'opacity-60 grayscale'} />
+          {price ?? '…'}
+        </motion.button>
+      )}
+    </motion.div>
+  )
+}
+
+function ItemsPanel({ shop, onExchange }: { shop: Shop | null; onExchange: () => void }) {
+  const [category, setCategory] = useState<Category>('Всё')
+  const visible = ITEMS.filter((item) => category === 'Всё' || item.category === category)
+  return (
+    <>
+      <Wallet onExchange={onExchange} />
+
+      <div className="mt-6 flex items-baseline justify-between">
+        <h2 className="font-display text-lg font-extrabold tracking-[-.02em]">Витрина</h2>
+        <motion.span key={visible.length} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="font-mono text-[11px] font-bold text-ink-3">
+          {visible.length} {plural(visible.length, 'ПРЕДМЕТ', 'ПРЕДМЕТА', 'ПРЕДМЕТОВ')}
+        </motion.span>
+      </div>
+
+      <div className="mt-3 flex gap-2">
+        {CATEGORIES.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setCategory(c)}
+            className={`relative rounded-xl px-3.5 py-1.5 text-[12.5px] font-bold transition-colors ${category === c ? 'text-acc-ink' : 'text-ink-2'}`}
+          >
+            {category === c && <motion.span layoutId="shop-cat" className="absolute inset-0 rounded-xl bg-acc-soft" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+            <span className="relative">{c}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-3 flex flex-col gap-3">
+        <AnimatePresence mode="popLayout">
+          {visible.map((item, index) => (
+            <ItemCard key={item.id} item={item} index={index} price={shop?.items[item.id]} />
+          ))}
+        </AnimatePresence>
+      </div>
+    </>
   )
 }
 
 export function ShopScreen() {
-  const [category, setCategory] = useState<Category>('Всё')
-  const visible = ITEMS.filter((item) => category === 'Всё' || item.category === category)
+  const [tab, setTab] = useState<Tab>('items')
+  const [shop, setShop] = useState<Shop | null>(null)
+  const dir = tab === 'exchange' ? 1 : -1
+
+  const load = useCallback(() => {
+    api<Shop>('/api/shop')
+      .then(setShop)
+      .catch(() => {})
+  }, [])
+  useEffect(load, [load])
 
   return (
     <MotionConfig reducedMotion="user">
       <div className="absolute inset-0 flex flex-col" style={{ paddingTop: 'var(--top)' }}>
         <div className="flex items-center justify-between border-b border-line bg-bg px-5 pb-3.5 pt-2">
           <Logo size={21} />
-          <StatsHeader />
+          <StatsHeader shop />
         </div>
 
-        <main className="no-scrollbar flex-1 overflow-y-auto px-5 pb-[112px] pt-4">
-          <Hero />
-
-          <div className="mt-6 flex items-baseline justify-between">
-            <h2 className="font-display text-lg font-extrabold tracking-[-.02em]">Витрина</h2>
-            <motion.span
-              key={visible.length}
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="font-mono text-[11px] font-bold text-ink-3"
+        <main className="no-scrollbar flex-1 overflow-y-auto overflow-x-hidden px-5 pb-[112px] pt-4">
+          <Segment
+            id="shop-tab"
+            value={tab}
+            onChange={setTab}
+            options={[
+              ['items', 'Товары'],
+              ['exchange', 'Обменник'],
+            ]}
+          />
+          <AnimatePresence mode="wait" initial={false} custom={dir}>
+            <motion.div
+              key={tab}
+              className="mt-4"
+              custom={dir}
+              variants={SLIDE}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.18, ease: 'easeOut' }}
             >
-              {visible.length} {plural(visible.length, 'ПРЕДМЕТ', 'ПРЕДМЕТА', 'ПРЕДМЕТОВ')}
-            </motion.span>
-          </div>
-
-          <Tabs value={category} onChange={setCategory} />
-
-          <div className="mt-3.5 flex flex-col gap-3">
-            <AnimatePresence mode="popLayout">
-              {visible.map((item, index) => (
-                <ItemCard key={item.name} item={item} index={index} />
-              ))}
-            </AnimatePresence>
-          </div>
-
-          <motion.div
-            layout
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ opacity: { delay: 0.3 }, layout: { type: 'spring', stiffness: 380, damping: 30 } }}
-            className="mt-5 flex items-start gap-2.5 rounded-card bg-sf2 px-3.5 py-3 text-[12px] leading-[1.4] text-ink-2"
-          >
-            <motion.span
-              className="mt-px text-gold-ink"
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 1.4, repeat: Infinity, repeatDelay: 1.6 }}
-            >
-              <Icon name="bolt" size={17} />
-            </motion.span>
-            <p>Продолжай заниматься — новые товары и способы их получить скоро появятся здесь.</p>
-          </motion.div>
+              {tab === 'items' ? <ItemsPanel shop={shop} onExchange={() => setTab('exchange')} /> : <ExchangePanel shop={shop} reload={load} />}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
     </MotionConfig>
