@@ -121,9 +121,10 @@ export function ProfileScreen() {
   const course = useGame((s) => s.course)
   const theme = useGame((s) => s.theme)
   const busy = useGame((s) => s.busy)
-  const { setTheme, rename, openProject, logout, toggleInfiniteHearts, addAdminXp, setAvatarFrame, setNameColor } = useGame.getState()
+  const { setTheme, rename, openProject, logout, toggleInfiniteHearts, addAdminXp, adminReset, setAvatarFrame, setNameColor } = useGame.getState()
   const [editing, setEditing] = useState(false)
   const [showStats, setShowStats] = useState(false)
+  const [confirmReset, setConfirmReset] = useState(false)
   if (!me || !course) return null
 
   const ownedFrames = AVATAR_FRAMES.filter((f) => me.owned.includes(f.id))
@@ -295,6 +296,34 @@ export function ProfileScreen() {
                 ))}
               </div>
             </div>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={async () => {
+                if (!confirmReset) {
+                  setConfirmReset(true)
+                  setTimeout(() => setConfirmReset(false), 3500)
+                  return
+                }
+                setConfirmReset(false)
+                await adminReset()
+              }}
+              className={[
+                'flex min-h-[44px] items-center justify-between rounded-xl border-2 px-3.5 text-left transition-colors',
+                confirmReset ? 'border-err bg-err/10 text-err' : 'border-line bg-bg text-ink-2 hover:border-err/50',
+                busy ? 'opacity-60' : '',
+              ].join(' ')}
+            >
+              <span className="flex items-center gap-2.5">
+                <Icon name="refresh" size={18} />
+                <span className="text-sm font-bold">
+                  {confirmReset ? 'Точно обнулить всё?' : 'Стать нищим'}
+                </span>
+              </span>
+              <span className="font-mono text-xs font-extrabold">
+                {confirmReset ? 'ДА, СБРОСИТЬ' : '0 XP · 0 🪙'}
+              </span>
+            </button>
           </section>
         )}
 

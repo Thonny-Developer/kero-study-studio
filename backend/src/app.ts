@@ -4,7 +4,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import * as z from 'zod/v4'
 import { bearer, checkPassword, createSession, dropSession, hashPassword, requireUser, withTz, type UserRow } from './auth.js'
 import { COURSE, TRACKS } from './content/lessons.js'
-import { one, ready, run } from './db.js'
+import { db, one, ready, run } from './db.js'
 import { env } from './env.js'
 import { answer, buildProject, getProject, getState, league, next, openNode, quit, retry, sandbox } from './game.js'
 import { bad, HttpError } from './http.js'
@@ -206,6 +206,45 @@ app.post('/api/admin/xp', requireUser, requireAdmin, async (req, res) => {
   await run(
     "INSERT INTO xp_events (user_id, amount, reason, day, week, created_at) VALUES (?, ?, 'admin', ?, ?, ?)",
     [u.id, b.amount, today, weekKey(today), Date.now()],
+  )
+  res.json(await getState(u))
+})
+
+app.post('/api/admin/reset', requireUser, requireAdmin, async (req, res) => {
+  const u = user(req)
+  await db().batch(
+    [
+      { sql: 'DELETE FROM xp_events WHERE user_id = ?', args: [u.id] },
+      { sql: 'DELETE FROM runs WHERE user_id = ?', args: [u.id] },
+      { sql: 'DELETE FROM active_lessons WHERE user_id = ?', args: [u.id] },
+      { sql: 'DELETE FROM projects WHERE user_id = ?', args: [u.id] },
+      { sql: 'DELETE FROM coin_events WHERE user_id = ?', args: [u.id] },
+      {
+        sql: `UPDATE users SET
+                hearts = 5,
+                hearts_at = NULL,
+                infinite_hearts = 0,
+                streak = 0,
+                max_streak = 0,
+                last_day = NULL,
+                bugs = 0,
+                coins = 0,
+                xp_spent = 0,
+                double_xp_until = NULL,
+                avatar_frame = NULL,
+                name_color = NULL,
+                pet_name = NULL,
+                pet_hunger = 80,
+                pet_thirst = 80,
+                pet_happiness = 85,
+                pet_xp = 0,
+                pet_updated_at = NULL,
+                pet_decor = NULL
+              WHERE id = ?`,
+        args: [u.id],
+      },
+    ],
+    'write',
   )
   res.json(await getState(u))
 })

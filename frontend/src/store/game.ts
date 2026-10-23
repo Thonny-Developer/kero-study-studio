@@ -74,6 +74,7 @@ interface Actions {
   setNameColor: (color: NameColorId | null) => Promise<void>
   toggleInfiniteHearts: (enabled: boolean) => Promise<void>
   addAdminXp: (amount?: number) => Promise<void>
+  adminReset: () => Promise<void>
   /** Обмен XP → монеты; 'price-changed' — курс сменился, пока юзер смотрел */
   exchange: (coins: number, price: number) => Promise<{ cost: number; shop: Shop } | 'price-changed' | false>
   /** Обратный обмен: монеты → XP */
@@ -327,6 +328,24 @@ export const useGame = create<GameState>()(
           try {
             applyMe(await api<Me>('/api/admin/xp', { body: { amount } }))
             toast(`+${amount.toLocaleString('ru-RU')} XP начислено`)
+          } catch (e) {
+            fail(e)
+          } finally {
+            set({ busy: false })
+          }
+        },
+
+        adminReset: async () => {
+          if (get().busy) return
+          set({ busy: true })
+          try {
+            applyMe(await api<Me>('/api/admin/reset', { body: {} }), {
+              result: null,
+              projectUnit: null,
+              ui: EMPTY_UI,
+              study: EMPTY_STUDY,
+            })
+            toast('Весь прогресс и покупки обнулены')
           } catch (e) {
             fail(e)
           } finally {
