@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import { Mascot, type MascotAnim, type Mood } from '../components/Mascot'
+import { useBlinkLook } from '../lib/blink'
 import { ItemArt } from '../components/pet/ItemArt'
 import { DecorThumb, PetAccessories, Room } from '../components/pet/Room'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
@@ -149,6 +150,7 @@ const cardV = { hidden: { opacity: 0, y: 14, scale: 0.97 }, show: { opacity: 1, 
 
 export function PetScreen() {
   const me = useGame((s) => s.me)
+  const blink = useBlinkLook()
   const busy = useGame((s) => s.busy)
   const { feedPet, buyPetDecor, togglePetDecor, playWithPet, go } = useGame.getState()
 
@@ -166,7 +168,6 @@ export function PetScreen() {
 
   if (!me) return null
   const pet = me.pet
-  const golden = me.owned.includes('blink')
 
   const later = (fn: () => void, ms: number) => {
     timers.current.push(window.setTimeout(fn, ms))
@@ -321,8 +322,8 @@ export function PetScreen() {
         aria-label="Погладить питомца"
         tabIndex={interactive ? 0 : -1}
       >
-        <Mascot size={interactive ? 118 : 96} mood={reactMood ?? baseMood} anim={reactAnim ?? baseAnim} color={golden ? '#F5A623' : 'var(--acc)'}>
-          <PetAccessories equipped={pet.equippedDecor} scale={interactive ? 1 : 96 / 118} />
+        <Mascot size={interactive ? 118 : 96} mood={reactMood ?? baseMood} anim={reactAnim ?? baseAnim} color={blink.color} skin={blink.skin}>
+          <PetAccessories equipped={pet.equippedDecor} scale={interactive ? 1 : 96 / 118} skin={blink.skin} />
         </Mascot>
       </motion.button>
     </div>

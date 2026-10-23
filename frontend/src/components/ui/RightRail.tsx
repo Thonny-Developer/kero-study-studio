@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Icon, type IconName } from '../../lib/icons'
 import { useGame } from '../../store/game'
 import { Mascot } from '../Mascot'
+import { useBlinkLook } from '../../lib/blink'
 import { AnimatedNumber } from './AnimatedNumber'
 import { Coin } from './Coin'
 import { Meter } from './ProgressBar'
@@ -33,9 +34,9 @@ function Bar({ label, value, color }: { label: string; value: number; color: str
 /** Правая колонка десктопа: статы, квест дня, питомец, кошелёк */
 export function RightRail() {
   const me = useGame((s) => s.me)
+  const blink = useBlinkLook()
   const go = useGame((s) => s.go)
   if (!me) return null
-  const golden = me.owned.includes('blink')
   const quest = Math.min(me.todayLessons, me.questGoal)
   const pet = me.pet
   const sad = Math.min(pet.hunger, pet.thirst, pet.happiness) < 30
@@ -74,7 +75,7 @@ export function RightRail() {
 
       <motion.button type="button" whileTap={{ y: 3 }} onClick={() => go('pet')} className={`${card} text-left`}>
         <div className="flex items-center gap-3">
-          <Mascot size={54} mood={sad ? 'sad' : 'happy'} anim={sad ? 'tilt' : 'bob'} color={golden ? '#F5A623' : 'var(--acc)'} />
+          <Mascot size={54} mood={sad ? 'sad' : 'happy'} anim={sad ? 'tilt' : 'bob'} color={blink.color} skin={blink.skin} />
           <div className="min-w-0 flex-1">
             <div className="truncate text-[14px] font-extrabold">{pet.name}</div>
             <div className="font-mono text-[11px] font-bold text-ink-3">УР. {pet.level}</div>

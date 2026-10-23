@@ -9,7 +9,7 @@ import { env } from './env.js'
 import { bad, HttpError } from './http.js'
 import { buildArtifact, gradePrompt } from './mistral.js'
 import { dayKey, shiftDay, weekday, weekKey } from './time.js'
-import { isFrameId, isNameColorId, ownedItems, type FrameId, type NameColorId } from './shop.js'
+import { isFrameId, isNameColorId, isSkinId, ownedItems, type FrameId, type NameColorId, type SkinId } from './shop.js'
 import { getPetState } from './pet.js'
 import { publicTask, type PublicTask } from './views.js'
 
@@ -218,6 +218,16 @@ export async function getState(stale: UserRow) {
         ? u.name_color
         : ((owned.find(isNameColorId) as NameColorId | undefined) ?? null)
 
+  // скин спутника; по умолчанию — Золотой Блинк, если он куплен (так было до появления скинов)
+  const blinkSkin: SkinId | null =
+    u.blink_skin === 'none'
+      ? null
+      : u.blink_skin && isSkinId(u.blink_skin) && owned.includes(u.blink_skin)
+        ? u.blink_skin
+        : owned.includes('blink')
+          ? 'blink'
+          : null
+
   return {
     user: { id: u.id, name: u.name, email: u.email, emailVerified: !!u.email_verified, goal: u.goal, level: u.level, mins: u.mins, track: u.track, createdAt: u.created_at },
     isAdmin: !!u.email_verified && env.adminEmails.includes((u.email ?? '').trim().toLowerCase()),
@@ -228,6 +238,7 @@ export async function getState(stale: UserRow) {
     owned,
     avatarFrame,
     nameColor,
+    blinkSkin,
     pet,
     doubleXpUntil: (u.double_xp_until ?? 0) > Date.now() ? u.double_xp_until : null,
     weekXp: Number(totals?.week_xp ?? 0),

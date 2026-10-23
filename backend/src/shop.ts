@@ -254,6 +254,7 @@ export const ITEMS = {
   heart: { price: 15, cosmetic: false },
   double: { price: 40, cosmetic: false },
   blink: { price: 120, cosmetic: true },
+  verity: { price: 200, cosmetic: true },
   // Рамки и эффекты аватара
   frame: { price: 80, cosmetic: true },
   frame_emerald: { price: 95, cosmetic: true },
@@ -296,6 +297,14 @@ export type FrameId = (typeof FRAME_IDS)[number]
 
 export function isFrameId(id: string): id is FrameId {
   return (FRAME_IDS as readonly string[]).includes(id)
+}
+
+/** Скины спутника Блинка */
+export const SKIN_IDS = ['blink', 'verity'] as const
+export type SkinId = (typeof SKIN_IDS)[number]
+
+export function isSkinId(id: string): id is SkinId {
+  return (SKIN_IDS as readonly string[]).includes(id)
 }
 
 export const NAME_COLOR_IDS = [
@@ -402,6 +411,9 @@ export async function buy(u: UserRow, id: unknown) {
       args.push(item)
     } else if (isNameColorId(item)) {
       set += ', name_color = ?'
+      args.push(item)
+    } else if (isSkinId(item)) {
+      set += ', blink_skin = ?'
       args.push(item)
     }
   }

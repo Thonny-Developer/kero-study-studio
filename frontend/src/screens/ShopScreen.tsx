@@ -1,5 +1,6 @@
 import { AnimatePresence, motion, MotionConfig, useAnimationControls } from 'framer-motion'
 import { useCallback, useEffect, useState } from 'react'
+import { Mascot } from '../components/Mascot'
 import { ExchangePanel } from '../components/shop/ExchangePanel'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import { Avatar, StyledName } from '../components/ui/Avatar'
@@ -9,7 +10,7 @@ import { StatsHeader } from '../components/ui/StatsHeader'
 import { api } from '../lib/api'
 import { plural } from '../lib/date'
 import { Icon, type IconName } from '../lib/icons'
-import type { AvatarFrameId, NameColorId, Shop, ShopItemId } from '../lib/types'
+import type { AvatarFrameId, BlinkSkinId, NameColorId, Shop, ShopItemId } from '../lib/types'
 import { useGame } from '../store/game'
 
 type Tab = 'items' | 'exchange'
@@ -20,7 +21,7 @@ const CATEGORIES: Category[] = ['Каталог', 'Усилители', 'Ава�
 // карточки каталога на первой вкладке витрины
 const CATALOG: { id: Exclude<Category, 'Каталог'>; icon: IconName; color: string; soft: string; description: string }[] = [
   { id: 'Усилители', icon: 'bolt', color: 'var(--gold)', soft: 'var(--goldSoft)', description: 'Сердца и двойной XP' },
-  { id: 'Аватарки', icon: 'user', color: 'var(--acc)', soft: 'var(--accSoft)', description: 'Рамки и окрас спутника' },
+  { id: 'Аватарки', icon: 'user', color: 'var(--acc)', soft: 'var(--accSoft)', description: 'Рамки и скины спутника' },
   { id: 'Цвет имени', icon: 'type', color: 'var(--mkt)', soft: 'var(--mktSoft)', description: 'Градиенты для ника' },
 ]
 
@@ -59,12 +60,22 @@ const ITEMS: Item[] = [
   {
     id: 'blink',
     name: 'Золотой Блинк',
-    description: 'Золотой окрас для спутника на карте пути.',
+    description: 'Золотой окрас для спутника на карте пути и в домике.',
     category: 'Аватарки',
     icon: 'spark',
     color: 'var(--codeInk)',
     soft: 'var(--codeSoft)',
     tag: 'Спутник',
+  },
+  {
+    id: 'verity',
+    name: 'Verity',
+    description: 'Жёлтый шарик с самой широкой улыбкой. Заменяет Блинка везде.',
+    category: 'Аватарки',
+    icon: 'smile',
+    color: 'var(--goldInk)',
+    soft: 'var(--goldSoft)',
+    tag: 'Скин спутника',
   },
   // Аватарки и эффекты
   {
@@ -368,14 +379,17 @@ function ItemCard({ item, index, price, onBuy }: { item: Item; index: number; pr
   const buy = useGame((s) => s.buy)
   const setAvatarFrame = useGame((s) => s.setAvatarFrame)
   const setNameColor = useGame((s) => s.setNameColor)
+  const blinkSkin = useGame((s) => s.me?.blinkSkin ?? null)
+  const setBlinkSkin = useGame((s) => s.setBlinkSkin)
   const icon = useAnimationControls()
   const btn = useAnimationControls()
   const [now, setNow] = useState(Date.now)
 
   const isFrame = item.id.startsWith('frame')
   const isNameColor = item.id.startsWith('color_')
-  const equippable = isFrame || isNameColor
-  const equipped = isFrame ? avatarFrame === item.id : isNameColor ? nameColor === item.id : false
+  const isSkin = item.id === 'blink' || item.id === 'verity'
+  const equippable = isFrame || isNameColor || isSkin
+  const equipped = isFrame ? avatarFrame === item.id : isNameColor ? nameColor === item.id : isSkin ? blinkSkin === item.id : false
 
   useEffect(() => {
     if (!doubleUntil) return
@@ -417,6 +431,8 @@ function ItemCard({ item, index, price, onBuy }: { item: Item; index: number; pr
           <Avatar name={userName} frame={item.id as AvatarFrameId} size={42} />
         ) : isNameColor ? (
           <StyledName name="Aa" color={item.id as NameColorId} className="font-display text-[23px] font-extrabold tracking-tight" />
+        ) : isSkin ? (
+          <Mascot size={44} anim="none" mood="happy" color="var(--gold)" skin={item.id === 'verity' ? 'verity' : null} />
         ) : (
           <Icon name={item.icon} size={28} />
         )}
@@ -444,7 +460,9 @@ function ItemCard({ item, index, price, onBuy }: { item: Item; index: number; pr
             onClick={() =>
               isFrame
                 ? setAvatarFrame(equipped ? null : (item.id as AvatarFrameId))
-                : setNameColor(equipped ? null : (item.id as NameColorId))
+                : isSkin
+                  ? setBlinkSkin(equipped ? null : (item.id as BlinkSkinId))
+                  : setNameColor(equipped ? null : (item.id as NameColorId))
             }
             className={`inline-flex shrink-0 items-center gap-1 rounded-xl px-2.5 py-2 text-[12px] font-extrabold transition-transform active:scale-95 ${
               equipped ? 'bg-ok-soft text-ok-ink' : 'bg-acc-soft text-acc-ink'

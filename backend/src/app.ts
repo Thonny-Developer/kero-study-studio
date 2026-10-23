@@ -10,7 +10,7 @@ import { answer, buildProject, getProject, getState, league, next, openNode, qui
 import { bad, HttpError } from './http.js'
 import { projectPage } from './page.js'
 import { confirmLink, confirmVerification, finishReset, normEmail, sendReset, sendVerification } from './email.js'
-import { buy, exchange, isFrameId, isNameColorId, ownedItems, sell, shopView } from './shop.js'
+import { buy, exchange, isFrameId, isNameColorId, isSkinId, ownedItems, sell, shopView } from './shop.js'
 import { buyPetDecor, feedPet, playWithPet, togglePetDecor } from './pet.js'
 import { dayKey, weekKey } from './time.js'
 import { courseView } from './views.js'
@@ -152,6 +152,7 @@ app.patch('/api/me', requireUser, async (req, res) => {
       track: z.enum(['code', 'mkt']).optional(),
       avatarFrame: z.string().nullable().optional(),
       nameColor: z.string().nullable().optional(),
+      blinkSkin: z.string().nullable().optional(),
     }),
     req.body,
   )
@@ -188,6 +189,18 @@ app.patch('/api/me', requireUser, async (req, res) => {
       if (!owned.includes(b.nameColor)) throw bad('Сначала купи этот цвет в магазине')
       await run('UPDATE users SET name_color = ? WHERE id = ?', [b.nameColor, u.id])
       u.name_color = b.nameColor
+    }
+  }
+  if (b.blinkSkin !== undefined) {
+    if (b.blinkSkin === null) {
+      await run("UPDATE users SET blink_skin = 'none' WHERE id = ?", [u.id])
+      u.blink_skin = 'none'
+    } else {
+      if (!isSkinId(b.blinkSkin)) throw bad('Неизвестный скин')
+      const owned = await ownedItems(u.id)
+      if (!owned.includes(b.blinkSkin)) throw bad('Сначала купи этот скин в магазине')
+      await run('UPDATE users SET blink_skin = ? WHERE id = ?', [b.blinkSkin, u.id])
+      u.blink_skin = b.blinkSkin
     }
   }
   res.json(await getState(u))

@@ -63,6 +63,8 @@ export interface Me {
   avatarFrame: AvatarFrameId | null
   /** активный окрас имени */
   nameColor: NameColorId | null
+  /** надетый скин спутника: Золотой Блинк или Verity */
+  blinkSkin: BlinkSkinId | null
   /** состояние тамагочи-питомца */
   pet: PetState
   doubleXpUntil: number | null
@@ -170,7 +172,10 @@ export type NameColorId =
   | 'color_aurora'
   | 'color_royal'
 
-export type ShopItemId = 'heart' | 'double' | 'blink' | AvatarFrameId | NameColorId
+/** Скины спутника Блинка */
+export type BlinkSkinId = 'blink' | 'verity'
+
+export type ShopItemId = 'heart' | 'double' | BlinkSkinId | AvatarFrameId | NameColorId
 
 export type PetFoodId =
   | 'food_cookie'

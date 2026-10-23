@@ -3,6 +3,7 @@ import { useRef } from 'react'
 import { useState } from 'react'
 import { UnitScene } from '../components/map/Scenes'
 import { Mascot } from '../components/Mascot'
+import { useBlinkLook } from '../lib/blink'
 import { Coin } from '../components/ui/Coin'
 import { Logo } from '../components/ui/Logo'
 import { Meter } from '../components/ui/ProgressBar'
@@ -87,7 +88,7 @@ export function MapScreen() {
   const track = useGame((s) => s.track)
   const units = useGame((s) => s.course?.tracks[track] ?? NO_UNITS)
   // «Золотой Блинк» из магазина
-  const blinkColor = useGame((s) => (s.me?.owned.includes('blink') ? 'var(--gold)' : undefined))
+  const blink = useBlinkLook()
   const coins = useGame((s) => s.me?.coins ?? 0)
   const done = useGame((s) => s.me?.done ?? NO_IDS)
   const busy = useGame((s) => s.busy)
@@ -218,7 +219,7 @@ export function MapScreen() {
                     </div>
                     {isCur && (
                       <div className="absolute bottom-0" style={x >= 0 ? { left: 22 } : { right: 22 }}>
-                        <Mascot size={60} color={blinkColor} />
+                        <Mascot size={60} color={blink.color} skin={blink.skin} />
                       </div>
                     )}
                   </div>
@@ -229,7 +230,7 @@ export function MapScreen() {
         })}
         {units.length > 0 && !cur && (
           <div className="mt-8 flex flex-col items-center gap-2 text-center">
-            <Mascot size={72} mood="happy" anim="jump" color={blinkColor} />
+            <Mascot size={72} mood="happy" anim="jump" color={blink.color} skin={blink.skin} />
             <div className="font-display text-lg font-bold">Трек пройден!</div>
             <div className="text-sm text-ink-2">Попробуй второй трек — там свои проекты.</div>
           </div>

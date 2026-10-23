@@ -125,6 +125,7 @@ const USER_COLUMNS: [string, string][] = [
   ['double_xp_until', 'INTEGER'],
   ['avatar_frame', 'TEXT'],
   ['name_color', 'TEXT'],
+  ['blink_skin', 'TEXT'],
   ['pet_name', 'TEXT'],
   ['pet_hunger', 'INTEGER NOT NULL DEFAULT 80'],
   ['pet_thirst', 'INTEGER NOT NULL DEFAULT 80'],

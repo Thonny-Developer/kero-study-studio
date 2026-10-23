@@ -548,7 +548,7 @@ export function DecorThumb({ id }: { id: PetDecorId }) {
 }
 
 /** Аксессуары прямо на Блинке (координаты под size=118) */
-export function PetAccessories({ equipped, scale = 1 }: { equipped: PetDecorId[]; scale?: number }) {
+export function PetAccessories({ equipped, scale = 1, skin = null }: { equipped: PetDecorId[]; scale?: number; skin?: 'verity' | null }) {
   return (
     <div className="pointer-events-none absolute left-0 top-0 h-[118px] w-[118px]" style={{ transform: `scale(${scale})`, transformOrigin: '0 0' }}>
       <AnimatePresence>
@@ -567,7 +567,7 @@ export function PetAccessories({ equipped, scale = 1 }: { equipped: PetDecorId[]
         {equipped.includes('decor_glasses') && (
           <motion.div
             key="glasses"
-            className="pointer-events-none absolute left-[25px] top-[57px] h-[22px] w-[68px]"
+            className={`pointer-events-none absolute left-[25px] h-[22px] w-[68px] ${skin === 'verity' ? 'top-[36px]' : 'top-[57px]'}`}
             initial={{ y: -40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -40, opacity: 0 }}

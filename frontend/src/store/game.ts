@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
 import { api, ApiError, onUnauthorized, setToken } from '../lib/api'
-import type { AvatarFrameId, Course, LessonResult, LessonView, Me, NameColorId, PetConsumableId, PetDecorId, Shop, ShopItemId, Track } from '../lib/types'
+import type { AvatarFrameId, BlinkSkinId, Course, LessonResult, LessonView, Me, NameColorId, PetConsumableId, PetDecorId, Shop, ShopItemId, Track } from '../lib/types'
 import { toast } from './toast'
 
 // Вся игровая логика (XP, сердечки, стрик, проверка ответов) — на бэкенде. Здесь только UI-состояние.
@@ -72,6 +72,7 @@ interface Actions {
   setTrack: (t: Track) => void
   setAvatarFrame: (frame: AvatarFrameId | null) => Promise<void>
   setNameColor: (color: NameColorId | null) => Promise<void>
+  setBlinkSkin: (skin: BlinkSkinId | null) => Promise<void>
   toggleInfiniteHearts: (enabled: boolean) => Promise<void>
   addAdminXp: (amount?: number) => Promise<void>
   adminReset: () => Promise<void>
@@ -306,6 +307,14 @@ export const useGame = create<GameState>()(
         setNameColor: async (nameColor) => {
           try {
             applyMe(await api<Me>('/api/me', { method: 'PATCH', body: { nameColor } }))
+          } catch (e) {
+            fail(e)
+          }
+        },
+
+        setBlinkSkin: async (blinkSkin) => {
+          try {
+            applyMe(await api<Me>('/api/me', { method: 'PATCH', body: { blinkSkin } }))
           } catch (e) {
             fail(e)
           }

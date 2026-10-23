@@ -14,6 +14,9 @@ const anim = (name: string, dur: number, delay = 0, vars: Vars = {}, ease = 'eas
     ...vars,
   }) as CSSProperties
 
+/** Анимируется только часть однотипных предметов: живо, но без сотен бесконечных анимаций */
+const lively = (seed: number, share = 0.35) => rnd(seed, 77) < share
+
 /** Детерминированный «рандом», чтобы сцена не прыгала между рендерами */
 const rnd = (i: number, seed = 1) => {
   const x = Math.sin(i * 127.1 + seed * 311.7) * 43758.5453
@@ -170,9 +173,11 @@ function Tree({ seed, c1 = '#5DBB4E', c2 = '#3F9A3A', c3 = '#9BE07F', fruit }: {
     <div
       style={{
         transformOrigin: '50% 100%',
-        ...anim('sway', 5 + rnd(seed, 2) * 3, rnd(seed, 3) * 5, {
-          '--sw': `${1 + rnd(seed, 4) * 1.5}deg`,
-        }),
+        ...(lively(seed)
+          ? anim('sway', 5 + rnd(seed, 2) * 3, rnd(seed, 3) * 5, {
+              '--sw': `${1 + rnd(seed, 4) * 1.5}deg`,
+            })
+          : {}),
       }}
     >
       {svg(
@@ -327,7 +332,7 @@ function Building({ seed }: { seed: number }) {
               height={8}
               rx={1.2}
               fill={on ? '#FFE38A' : '#3E4A6B'}
-              style={on && rnd(r + c, seed + 9) > 0.7 ? anim('pulse', 3 + rnd(r, c) * 3, rnd(c, r) * 4) : undefined}
+              style={on && lively(seed, 0.4) && rnd(r * 5 + c, seed + 9) > 0.85 ? anim('pulse', 3 + rnd(r, c) * 3, rnd(c, r) * 4) : undefined}
             />
           )
         }),
@@ -346,7 +351,7 @@ function Building({ seed }: { seed: number }) {
             fill="#9A93B0"
             style={{
               transformOrigin: '21px 19px',
-              ...anim('spin', 1.5, 0, {}, 'linear'),
+              ...(lively(seed, 0.4) ? anim('spin', 1.5, 0, {}, 'linear') : {}),
             }}
           />
           <rect x={40} y={16} width={16} height={8} rx={4} fill="#4FB3F6" opacity={0.8} />
@@ -412,9 +417,13 @@ const Asteroid = ({ seed }: { seed: number }) => {
   const w = 34 + rnd(seed, 1) * 34
   return (
     <div
-      style={anim('bob', 5 + rnd(seed, 2) * 3, rnd(seed, 3) * 4, {
-        '--amp': '-5px',
-      })}
+      style={
+        lively(seed)
+          ? anim('bob', 5 + rnd(seed, 2) * 3, rnd(seed, 3) * 4, {
+              '--amp': '-5px',
+            })
+          : undefined
+      }
     >
       {svg(
         w,
@@ -438,7 +447,7 @@ const Crystal = ({ seed }: { seed: number }) => {
     '0 0 30 36',
     <>
       <Shadow cx={15} cy={33} rx={12} ry={3} o={0.4} />
-      <circle cx={15} cy={20} r={14} fill={c[0]} opacity={0.18} style={anim('pulse', 2.4, rnd(seed, 2) * 2, { '--lo': '0.3' })} />
+      <circle cx={15} cy={20} r={14} fill={c[0]} opacity={0.18} style={lively(seed, 0.4) ? anim('pulse', 2.4, rnd(seed, 2) * 2, { '--lo': '0.3' }) : undefined} />
       <path d="M15 2l6 14-6 18-6-18z" fill={c[0]} />
       <path d="M15 2l6 14-6 18z" fill={c[1]} />
       <path d="M5 16l4 6-3 11-4-9zM25 14l3 8-4 11-2-11z" fill={c[1]} />
@@ -519,9 +528,13 @@ const Ufo = () => (
 
 const CloudPuff = ({ seed }: { seed: number }) => (
   <div
-    style={anim('bob', 6 + rnd(seed, 1) * 3, rnd(seed, 2) * 4, {
-      '--amp': '-4px',
-    })}
+    style={
+      lively(seed)
+        ? anim('bob', 6 + rnd(seed, 1) * 3, rnd(seed, 2) * 4, {
+            '--amp': '-4px',
+          })
+        : undefined
+    }
   >
     {svg(
       70 + rnd(seed, 3) * 24,
@@ -856,7 +869,7 @@ const LollipopTree = ({ seed }: { seed: number }) => {
           <g
             style={{
               transformOrigin: '25px 25px',
-              ...anim('spin', 9 + rnd(seed, 5) * 5, 0, {}, 'linear'),
+              ...(lively(seed, 0.5) ? anim('spin', 9 + rnd(seed, 5) * 5, 0, {}, 'linear') : {}),
             }}
           >
             <circle cx={25} cy={25} r={23} fill="#fff" />
@@ -1202,7 +1215,7 @@ function layout(t: Theme, seed: number, w: number, h: number, path: Pt[]) {
   const ground: Placed[] = []
   let k = 0
   // ряды по краям; на широком экране — несколько рядов, вплоть до дорожки
-  const cols = Math.max(1, Math.floor((w / 2 - 170) / 62))
+  const cols = Math.min(3, Math.max(1, Math.floor((w / 2 - 170) / 62)))
   for (const side of [0, 1])
     for (let c = 0; c < cols; c++) {
       for (let y = 30 + rnd(side + c * 2, seed) * 40; y < h - 10; y += 52 + rnd(k, seed + 2) * 34 + c * 8) {
@@ -1218,7 +1231,7 @@ function layout(t: Theme, seed: number, w: number, h: number, path: Pt[]) {
       }
     }
   // мелочи и живность на поле — подальше от дорожки
-  const area = w / 390
+  const area = Math.min(1.6, w / 390)
   const tries = Math.round((h / 16) * area)
   let critters = 0
   for (let i = 0; i < tries; i++) {
@@ -1378,7 +1391,7 @@ export function UnitScene({ index, first, last }: { index: number; first: boolea
     const el = ref.current
     if (!el) return
     const root = el.closest('[data-map-scroll]')
-    const nearIo = new IntersectionObserver(([e]) => setNear(e.isIntersecting), { root, rootMargin: '900px 0px' })
+    const nearIo = new IntersectionObserver(([e]) => setNear(e.isIntersecting), { root, rootMargin: '400px 0px' })
     const visIo = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { root })
     nearIo.observe(el)
     visIo.observe(el)

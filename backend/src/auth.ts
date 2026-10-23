@@ -25,6 +25,7 @@ export interface UserRow {
   double_xp_until: number | null
   avatar_frame: string | null
   name_color: string | null
+  blink_skin: string | null
   pet_name: string | null
   pet_hunger: number
   pet_thirst: number
