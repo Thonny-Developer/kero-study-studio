@@ -3,7 +3,8 @@ import { useEffect, type ReactNode } from 'react'
 import { Mascot } from './components/Mascot'
 import { Button } from './components/ui/Button'
 import { Logo } from './components/ui/Logo'
-import { PhoneFrame } from './components/ui/PhoneFrame'
+import { AppShell } from './components/ui/AppShell'
+import { RightRail } from './components/ui/RightRail'
 import { SidePanel } from './components/ui/SidePanel'
 import { TabBar, TAB_SCREENS } from './components/ui/TabBar'
 import { Toast } from './components/ui/Toast'
@@ -111,7 +112,7 @@ export function App() {
   const tabbed = screen !== 'splash' && TAB_SCREENS.includes(screen)
 
   return (
-    <PhoneFrame side={<SidePanel />}>
+    <AppShell tabbed={tabbed} wide={screen === 'map'} nav={<SidePanel />} rail={<RightRail />} tabBar={<TabBar />}>
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.div
           key={tabbed ? `tab-${screen}` : screen}
@@ -124,8 +125,7 @@ export function App() {
           <View />
         </motion.div>
       </AnimatePresence>
-      {tabbed && <TabBar />}
       <Toast />
-    </PhoneFrame>
+    </AppShell>
   )
 }

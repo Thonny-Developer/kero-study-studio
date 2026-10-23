@@ -85,6 +85,7 @@ interface Actions {
   togglePetDecor: (item: PetDecorId) => Promise<void>
   playWithPet: (name?: string) => Promise<boolean>
   openNode: (id: string) => Promise<void>
+  skipUnit: (unitId: string) => Promise<boolean>
   openProject: (unitId: string) => void
   select: (i: number) => void
   addBlock: (id: string) => void
@@ -460,6 +461,22 @@ export const useGame = create<GameState>()(
             else applyMe(r.state, { screen: r.open === 'noHearts' ? 'noHearts' : 'lesson', track: r.state.lesson?.track ?? get().track })
           } catch (e) {
             fail(e)
+          } finally {
+            set({ busy: false })
+          }
+        },
+
+        skipUnit: async (unitId) => {
+          if (get().busy) return false
+          set({ busy: true })
+          try {
+            const r = await api<{ cost: number; unitTitle: string; state: Me }>(`/api/units/${unitId}/skip`, { body: {} })
+            applyMe(r.state)
+            toast(`Тема «${r.unitTitle}» пропущена за ${r.cost.toLocaleString('ru-RU')} монет`)
+            return true
+          } catch (e) {
+            fail(e)
+            return false
           } finally {
             set({ busy: false })
           }

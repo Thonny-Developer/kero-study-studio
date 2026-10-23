@@ -1,7 +1,7 @@
 import { useGame, type Screen } from '../../store/game'
 import { Icon, type IconName } from '../../lib/icons'
 
-const TABS: { screen: Screen; label: string; icon: IconName }[] = [
+export const TABS: { screen: Screen; label: string; icon: IconName }[] = [
   { screen: 'map', label: 'Путь', icon: 'map' },
   { screen: 'league', label: 'Лиги', icon: 'league' },
   { screen: 'pet', label: 'Питомец', icon: 'pet' },

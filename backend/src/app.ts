@@ -6,7 +6,7 @@ import { bearer, checkPassword, createSession, dropSession, hashPassword, requir
 import { COURSE, TRACKS } from './content/lessons.js'
 import { db, one, ready, run } from './db.js'
 import { env } from './env.js'
-import { answer, buildProject, getProject, getState, league, next, openNode, quit, retry, sandbox } from './game.js'
+import { answer, buildProject, getProject, getState, league, next, openNode, quit, retry, sandbox, skipUnit } from './game.js'
 import { bad, HttpError } from './http.js'
 import { projectPage } from './page.js'
 import { confirmLink, confirmVerification, finishReset, normEmail, sendReset, sendVerification } from './email.js'
@@ -253,6 +253,11 @@ app.post('/api/admin/reset', requireUser, requireAdmin, async (req, res) => {
 
 app.post('/api/nodes/:id/open', requireUser, async (req, res) => {
   const r = await openNode(user(req), String(req.params.id))
+  res.json({ ...r, state: await getState(user(req)) })
+})
+
+app.post('/api/units/:unitId/skip', requireUser, async (req, res) => {
+  const r = await skipUnit(user(req), String(req.params.unitId))
   res.json({ ...r, state: await getState(user(req)) })
 })
 

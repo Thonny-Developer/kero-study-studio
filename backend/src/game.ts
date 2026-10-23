@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import type { InStatement } from '@libsql/client'
 import type { UserRow } from './auth.js'
-import { findNode, trackNodes } from './content/lessons.js'
+import { COURSE, findNode, TRACKS, trackNodes } from './content/lessons.js'
 import { LEARNING } from './content/learning.js'
 import type { LessonNode, Task, Track } from './content/types.js'
 import { all, db, one, run } from './db.js'
@@ -294,6 +294,80 @@ export async function openNode(u: UserRow, nodeId: string): Promise<OpenResult> 
     'write',
   )
   return { open: 'lesson' }
+}
+
+/** Скип темы (юнита) за монеты: 1-я тема = 1000, 2-я = 2000, 3-я = 3000 и т.д. */
+export async function skipUnit(u: UserRow, unitId: string): Promise<{ cost: number; unitTitle: string }> {
+  let foundTrack: Track | null = null
+  let unitIndex = -1
+  for (const t of TRACKS) {
+    const idx = COURSE[t].findIndex((un) => un.id === unitId)
+    if (idx !== -1) {
+      foundTrack = t
+      unitIndex = idx
+      break
+    }
+  }
+  if (!foundTrack || unitIndex < 0) throw bad('Тема не найдена')
+
+  const units = COURSE[foundTrack]
+  const unit = units[unitIndex]
+  const cost = (unitIndex + 1) * 1000
+
+  const { done } = await progress(u.id)
+
+  // Проверяем, что предыдущие темы трека уже закрыты
+  for (let i = 0; i < unitIndex; i++) {
+    if (units[i].nodes.some((n) => !done.has(n.id))) {
+      throw bad('Сначала пройди или пропусти предыдущую тему', 'locked')
+    }
+  }
+
+  const todo = unit.nodes.filter((n) => !done.has(n.id))
+  if (todo.length === 0) throw bad('Эта тема уже пройдена')
+
+  const fresh = await one<UserRow>('SELECT * FROM users WHERE id = ?', [u.id])
+  if (!fresh || fresh.coins < cost) {
+    throw bad(`Не хватает монет: нужно ${cost.toLocaleString('ru-RU')}`, 'no-coins')
+  }
+
+  const now = Date.now()
+  const today = dayKey(u.tz)
+  const stmts: InStatement[] = [
+    {
+      sql: 'UPDATE users SET coins = coins - ? WHERE id = ? AND coins >= ?',
+      args: [cost, u.id, cost],
+    },
+    {
+      sql: "INSERT INTO coin_events (user_id, kind, amount, xp, item, created_at) VALUES (?, 'buy', ?, 0, ?, ?)",
+      args: [u.id, -cost, `skip:${unit.id}`, now],
+    },
+    {
+      sql: 'DELETE FROM active_lessons WHERE user_id = ?',
+      args: [u.id],
+    },
+  ]
+
+  for (const node of todo) {
+    const got = node.kind === 'chest' ? 0 : node.tasks.length
+    stmts.push({
+      sql: 'INSERT INTO runs (user_id, node_id, unit_id, kind, got, mist, xp, time_ms, day, created_at) VALUES (?, ?, ?, ?, ?, 0, 0, 0, ?, ?)',
+      args: [u.id, node.id, unit.id, node.kind, got, today, now],
+    })
+    if (node.kind === 'project') {
+      const sbTask = node.tasks.find((t) => t.type === 'sb')
+      const defaultPrompt = sbTask && 'example' in sbTask ? sbTask.example : `${unit.title}: ${unit.sub}`
+      stmts.push({
+        sql: 'INSERT OR IGNORE INTO projects (id, user_id, unit_id, kind, prompt, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        args: [crypto.randomBytes(9).toString('base64url'), u.id, unit.id, unit.project.artifact, defaultPrompt, now, now],
+      })
+    }
+  }
+
+  const rs = await db().batch(stmts, 'write')
+  if (rs[0].rowsAffected === 0) throw bad(`Не хватает монет: нужно ${cost.toLocaleString('ru-RU')}`, 'no-coins')
+
+  return { cost, unitTitle: unit.title }
 }
 
 /* ---------- Урок ---------- */

@@ -29,9 +29,10 @@
 [data-track='code'] { --acc: var(--code); --accSh: var(--codeSh); --accSoft: var(--codeSoft); --accInk: var(--codeInk); }
 [data-track='mkt'] { --acc: var(--mkt); --accSh: var(--mktSh); --accSoft: var(--mktSoft); --accInk: var(--mktInk); }
 
-.phone-frame {
-  --top: 50px;
-  --bottom: 30px;
+/* центральная колонка десктопа: нет статус-бара и home-индикатора */
+.desk {
+  --top: 16px;
+  --bottom: 16px;
 }
 
 html,
@@ -121,3 +122,37 @@ textarea {
   background-size: 220% auto;
   animation: name-shimmer 3.2s linear infinite;
 }
+
+/* Фоновые сцены карты: всё движение на CSS-трансформах, параметры — через custom properties */
+@keyframes sc-drift { from { transform: translateX(var(--from, -120px)); } to { transform: translateX(var(--to, 120px)); } }
+@keyframes sc-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(var(--amp, -8px)); } }
+@keyframes sc-sway { 0%, 100% { transform: rotate(var(--sw, -4deg)); } 50% { transform: rotate(calc(var(--sw, -4deg) * -1)); } }
+@keyframes sc-twinkle { 0%, 100% { opacity: 0.15; transform: scale(0.7); } 50% { opacity: 1; transform: scale(1); } }
+@keyframes sc-rise {
+  0% { transform: translate(0, 0); opacity: 0; }
+  15%, 75% { opacity: 1; }
+  100% { transform: translate(var(--sx, 0px), var(--dist, -160px)); opacity: 0; }
+}
+@keyframes sc-fall {
+  0% { transform: translate(0, 0) rotate(0); opacity: 0; }
+  15%, 75% { opacity: 1; }
+  100% { transform: translate(var(--sx, 20px), var(--dist, 180px)) rotate(var(--rot, 180deg)); opacity: 0; }
+}
+@keyframes sc-spin { to { transform: rotate(360deg); } }
+@keyframes sc-flicker { 0%, 100% { transform: scale(1, 1); } 33% { transform: scale(0.92, 1.12); } 66% { transform: scale(1.05, 0.94); } }
+@keyframes sc-flap { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.25); } }
+@keyframes sc-pulse { 0%, 100% { opacity: var(--lo, 0.35); } 50% { opacity: 1; } }
+
+.map-scene .sc-world { background: var(--sky-day); }
+[data-theme='dark'] .map-scene .sc-world { background: var(--sky-night); }
+.sc-band { --cl-back: #dbe4fa; --cl-front: #ffffff; --cl-low: #e4ebfb; --cl-shade: #c9d5f0; }
+[data-theme='dark'] .sc-band { --cl-back: #36345a; --cl-front: #4a4772; --cl-low: #3d3a63; --cl-shade: #2a2848; }
+[data-theme='dark'] .map-scene[data-light] .sc-deco { filter: brightness(0.72) saturate(1.1); }
+[data-theme='dark'] .map-scene[data-light] .sc-path { filter: brightness(0.62); }
+@media (prefers-reduced-motion: reduce) {
+  .map-scene * { animation: none !important; }
+}
+@keyframes sc-peck { 0%, 55%, 100% { transform: rotate(0); } 62%, 76% { transform: rotate(38deg); } 69%, 83% { transform: rotate(20deg); } }
+@keyframes sc-hop { 0%, 80%, 100% { transform: translate(0, 0); } 86% { transform: translate(var(--hx, 6px), -8px); } 92% { transform: translate(var(--hx, 6px), 0); } }
+@keyframes sc-walk { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(var(--wx, 26px)); } }
+[data-theme='dark'] .map-scene[data-light] .sc-tex { opacity: 0.3; }

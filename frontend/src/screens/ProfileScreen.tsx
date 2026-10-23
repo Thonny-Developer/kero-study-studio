@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from 'react'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import { Avatar, AVATAR_FRAMES, NAME_COLORS, StyledName } from '../components/ui/Avatar'
+import { Button } from '../components/ui/Button'
 import { Coin } from '../components/ui/Coin'
 import { MONTHS, MONTHS_GEN, plural, WEEKDAYS } from '../lib/date'
 import { Icon, type IconName } from '../lib/icons'
@@ -296,8 +297,9 @@ export function ProfileScreen() {
                 ))}
               </div>
             </div>
-            <button
-              type="button"
+            <Button
+              size="md"
+              variant={confirmReset ? 'err' : 'secondary'}
               disabled={busy}
               onClick={async () => {
                 if (!confirmReset) {
@@ -308,22 +310,10 @@ export function ProfileScreen() {
                 setConfirmReset(false)
                 await adminReset()
               }}
-              className={[
-                'flex min-h-[44px] items-center justify-between rounded-xl border-2 px-3.5 text-left transition-colors',
-                confirmReset ? 'border-err bg-err/10 text-err' : 'border-line bg-bg text-ink-2 hover:border-err/50',
-                busy ? 'opacity-60' : '',
-              ].join(' ')}
             >
-              <span className="flex items-center gap-2.5">
-                <Icon name="refresh" size={18} />
-                <span className="text-sm font-bold">
-                  {confirmReset ? 'Точно обнулить всё?' : 'Стать нищим'}
-                </span>
-              </span>
-              <span className="font-mono text-xs font-extrabold">
-                {confirmReset ? 'ДА, СБРОСИТЬ' : '0 XP · 0 🪙'}
-              </span>
-            </button>
+              <Icon name="refresh" size={18} />
+              <span>{confirmReset ? 'Точно обнулить всё?' : 'Стать нищим'}</span>
+            </Button>
           </section>
         )}
 
