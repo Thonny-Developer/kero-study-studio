@@ -321,8 +321,9 @@ export function PetScreen() {
         aria-label="Погладить питомца"
         tabIndex={interactive ? 0 : -1}
       >
-        <Mascot size={interactive ? 118 : 96} mood={reactMood ?? baseMood} anim={reactAnim ?? baseAnim} color={golden ? '#F5A623' : 'var(--acc)'} />
-        {interactive && <PetAccessories equipped={pet.equippedDecor} />}
+        <Mascot size={interactive ? 118 : 96} mood={reactMood ?? baseMood} anim={reactAnim ?? baseAnim} color={golden ? '#F5A623' : 'var(--acc)'}>
+          <PetAccessories equipped={pet.equippedDecor} scale={interactive ? 1 : 96 / 118} />
+        </Mascot>
       </motion.button>
     </div>
   )

@@ -13,6 +13,14 @@ function Chip({ icon, color, value }: { icon: IconName | ReactNode; color?: stri
   )
 }
 
+/** 999 → «999», 1 565 → «1.5к», 2 300 000 → «2.3м» (округление вниз, чтобы не завышать) */
+const compact = (n: number) => {
+  const v = Math.round(n)
+  if (v < 1000) return String(v)
+  const [d, suf] = v < 1_000_000 ? [1000, 'к'] : [1_000_000, 'м']
+  return `${(Math.floor((v / d) * 10) / 10).toFixed(1)}${suf}`
+}
+
 /** Стрик · XP · сердечки; в магазине — монеты · XP для обмена · сердечки */
 export function StatsHeader({ shop = false }: { shop?: boolean }) {
   const streak = useGame((s) => s.me?.streak ?? 0)
@@ -31,8 +39,7 @@ export function StatsHeader({ shop = false }: { shop?: boolean }) {
   return (
     <div className="flex gap-1.5">
       <Chip icon="flame" color="var(--gold)" value={streak} />
-      <Chip icon={<Coin size={17} />} value={<AnimatedNumber value={coins} />} />
-      <Chip icon="bolt" color="var(--acc)" value={<AnimatedNumber value={xp} />} />
+      <Chip icon="bolt" color="var(--acc)" value={<AnimatedNumber value={xp} format={compact} />} />
       <Chip icon="heart" color="var(--err)" value={infiniteHearts ? '∞' : hearts} />
     </div>
   )

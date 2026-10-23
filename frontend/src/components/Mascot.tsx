@@ -1,4 +1,5 @@
 import { motion, type TargetAndTransition } from 'framer-motion'
+import type { ReactNode } from 'react'
 
 export type Mood = 'idle' | 'happy' | 'sad' | 'wow'
 export type MascotAnim = 'bob' | 'jump' | 'tilt' | 'none'
@@ -64,16 +65,19 @@ export function Mascot({
   mood = 'idle',
   anim = 'bob',
   color = 'var(--acc)',
+  children,
 }: {
   size?: number
   mood?: Mood
   anim?: MascotAnim
   color?: string
+  /** Аксессуары: двигаются вместе с Блинком */
+  children?: ReactNode
 }) {
   return (
     <motion.div
       key={`${mood}-${anim}`}
-      style={{ width: size, height: size, transformOrigin: '50% 90%', flexShrink: 0 }}
+      style={{ position: 'relative', width: size, height: size, transformOrigin: '50% 90%', flexShrink: 0 }}
       animate={ANIM[anim]}
     >
       <svg width={size} height={size} viewBox="0 0 100 100" style={{ display: 'block', overflow: 'visible' }} aria-hidden>
@@ -86,6 +90,7 @@ export function Mascot({
         <rect x={25} y={40} width={50} height={36} rx={12} fill={K} />
         <Face mood={mood} />
       </svg>
+      {children}
     </motion.div>
   )
 }
