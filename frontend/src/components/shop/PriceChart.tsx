@@ -35,7 +35,7 @@ export function PriceChart({ points, week = false }: { points: [number, number][
     return () => ro.disconnect()
   }, [])
 
-  const { xy, line, area, lo, hi } = useMemo(() => {
+  const { xy, line, area, min, max } = useMemo(() => {
     const prices = points.map((p) => p[1])
     const min = Math.min(...prices)
     const max = Math.max(...prices)
@@ -44,7 +44,7 @@ export function PriceChart({ points, week = false }: { points: [number, number][
     const hi = max + pad
     const xy = points.map(([, p], i): [number, number] => [(i / (points.length - 1)) * W, 8 + (1 - (p - lo) / (hi - lo)) * (H - 16)])
     const line = smooth(xy)
-    return { xy, line, area: `${line} L${W},${H} L0,${H} Z`, lo, hi }
+    return { xy, line, area: `${line} L${W},${H} L0,${H} Z`, min, max }
   }, [points, W])
 
   if (points.length < 2) return <div ref={box} className="h-[150px]" />
@@ -103,8 +103,8 @@ export function PriceChart({ points, week = false }: { points: [number, number][
         {h && <line x1={h[0]} x2={h[0]} y1="0" y2={H} stroke="var(--ink3)" strokeWidth="1.2" strokeDasharray="2 3" />}
       </svg>
 
-      <span className="pointer-events-none absolute right-0 top-0 font-mono text-[9.5px] font-bold text-ink-3">{fmtPrice(hi)}</span>
-      <span className="pointer-events-none absolute bottom-0 right-0 font-mono text-[9.5px] font-bold text-ink-3">{fmtPrice(lo)}</span>
+      <span className="pointer-events-none absolute right-0 top-0 font-mono text-[9.5px] font-bold text-ink-3">макс {fmtPrice(max)}</span>
+      <span className="pointer-events-none absolute bottom-0 right-0 font-mono text-[9.5px] font-bold text-ink-3">мин {fmtPrice(min)}</span>
 
       {/* текущая цена */}
       <motion.div
