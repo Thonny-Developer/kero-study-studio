@@ -119,6 +119,80 @@ function EmailCard({ me }: { me: Me }) {
 }
 
 // свёрнутость админ-меню помним между заходами
+/** Строка админ-меню: быстрые суммы + поле для своей суммы */
+function AdminGrant({
+  icon,
+  tint = '',
+  label,
+  max,
+  presets,
+  busy,
+  onGrant,
+}: {
+  icon: ReactNode
+  tint?: string
+  label: string
+  max: number
+  presets: number[]
+  busy: boolean
+  onGrant: (amount: number) => Promise<void>
+}) {
+  const [value, setValue] = useState('')
+  const amount = Math.floor(Number(value.replace(/\s/g, '')))
+  const valid = Number.isFinite(amount) && amount >= 1 && amount <= max
+  const submit = async () => {
+    if (!valid || busy) return
+    await onGrant(amount)
+    setValue('')
+  }
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border-2 border-line bg-bg px-3.5 py-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2.5">
+          <span className={tint}>{icon}</span>
+          <span className="text-sm font-bold">{label}</span>
+        </span>
+        <div className="flex shrink-0 gap-1.5">
+          {presets.map((amt) => (
+            <button
+              key={amt}
+              type="button"
+              disabled={busy}
+              onClick={() => onGrant(amt)}
+              className="rounded-lg bg-acc-soft px-2.5 py-1.5 font-mono text-xs font-extrabold text-acc-ink transition-transform active:scale-95 disabled:opacity-50"
+            >
+              +{amt >= 1000 ? `${amt / 1000}к` : amt}
+            </button>
+          ))}
+        </div>
+      </div>
+      <form
+        className="flex gap-1.5"
+        onSubmit={(e) => {
+          e.preventDefault()
+          submit()
+        }}
+      >
+        <input
+          inputMode="numeric"
+          value={value}
+          onChange={(e) => setValue(e.target.value.replace(/[^\d\s]/g, ''))}
+          placeholder="Своя сумма"
+          title={`От 1 до ${max.toLocaleString('ru-RU')}`}
+          className="h-9 min-w-0 flex-1 rounded-lg border-[1.5px] border-line bg-sf px-3 font-mono text-sm font-bold text-ink outline-none placeholder:font-sans placeholder:font-medium placeholder:text-ink-3 focus:border-acc"
+        />
+        <button
+          type="submit"
+          disabled={!valid || busy}
+          className="h-9 shrink-0 rounded-lg bg-acc px-3.5 text-[13px] font-extrabold text-white transition-transform active:scale-95 disabled:opacity-40"
+        >
+          Начислить
+        </button>
+      </form>
+    </div>
+  )
+}
+
 const ADMIN_KEY = 'vibely-admin-open'
 const readAdminOpen = () => {
   try {
@@ -133,7 +207,7 @@ export function ProfileScreen() {
   const course = useGame((s) => s.course)
   const theme = useGame((s) => s.theme)
   const busy = useGame((s) => s.busy)
-  const { setTheme, rename, openProject, logout, toggleInfiniteHearts, addAdminXp, adminReset, setAvatarFrame, setNameColor } = useGame.getState()
+  const { setTheme, rename, openProject, logout, toggleInfiniteHearts, addAdminXp, addAdminCoins, adminReset, setAvatarFrame, setNameColor } = useGame.getState()
   const [editing, setEditing] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
@@ -323,27 +397,16 @@ export function ProfileScreen() {
                             {me.infiniteHearts ? '∞' : '○'}
                           </span>
                         </button>
-                        <div className="flex min-h-[48px] items-center justify-between gap-2 rounded-xl border-2 border-line bg-bg px-3.5 py-2">
-                          <span className="flex items-center gap-2.5">
-                            <span className="text-acc">
-                              <Icon name="bolt" size={19} />
-                            </span>
-                            <span className="text-sm font-bold">Накрутка XP</span>
-                          </span>
-                          <div className="flex shrink-0 gap-1.5">
-                            {[100, 500, 2500].map((amt) => (
-                              <button
-                                key={amt}
-                                type="button"
-                                disabled={busy}
-                                onClick={() => addAdminXp(amt)}
-                                className="rounded-lg bg-acc-soft px-2.5 py-1.5 font-mono text-xs font-extrabold text-acc-ink transition-transform active:scale-95 disabled:opacity-50"
-                              >
-                                +{amt}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                        <AdminGrant
+                          icon={<Icon name="bolt" size={19} />}
+                          tint="text-acc"
+                          label="Накрутка XP"
+                          max={100_000}
+                          presets={[100, 500, 2500]}
+                          busy={busy}
+                          onGrant={addAdminXp}
+                        />
+                        <AdminGrant icon={<Coin size={19} />} label="Накрутка монет" max={1_000_000} presets={[100, 1000, 10000]} busy={busy} onGrant={addAdminCoins} />
                         <Button
                           size="md"
                           variant={confirmReset ? 'err' : 'secondary'}

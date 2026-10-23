@@ -223,6 +223,21 @@ app.post('/api/admin/xp', requireUser, requireAdmin, async (req, res) => {
   res.json(await getState(u))
 })
 
+app.post('/api/admin/coins', requireUser, requireAdmin, async (req, res) => {
+  const b = parse(z.object({ amount: z.number().int().min(1).max(1_000_000) }), req.body ?? {})
+  const u = user(req)
+  // kind 'admin' не участвует в расчёте курса обменника
+  await db().batch(
+    [
+      { sql: 'UPDATE users SET coins = coins + ? WHERE id = ?', args: [b.amount, u.id] },
+      { sql: "INSERT INTO coin_events (user_id, kind, amount, created_at) VALUES (?, 'admin', ?, ?)", args: [u.id, b.amount, Date.now()] },
+    ],
+    'write',
+  )
+  u.coins += b.amount
+  res.json(await getState(u))
+})
+
 app.post('/api/admin/reset', requireUser, requireAdmin, async (req, res) => {
   const u = user(req)
   await db().batch(
