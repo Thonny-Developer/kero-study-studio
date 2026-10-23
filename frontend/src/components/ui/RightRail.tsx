@@ -37,6 +37,7 @@ export function RightRail() {
   const blink = useBlinkLook()
   const go = useGame((s) => s.go)
   const inShop = useGame((s) => s.screen === 'shop')
+  const inPet = useGame((s) => s.screen === 'pet')
   if (!me) return null
   const quest = Math.min(me.todayLessons, me.questGoal)
   const pet = me.pet
@@ -74,21 +75,23 @@ export function RightRail() {
         </div>
       </section>
 
-      <motion.button type="button" whileTap={{ y: 3 }} onClick={() => go('pet')} className={`${card} text-left`}>
-        <div className="flex items-center gap-3">
-          <Mascot size={54} mood={sad ? 'sad' : 'happy'} anim={sad ? 'tilt' : 'bob'} color={blink.color} skin={blink.skin} />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[14px] font-extrabold">{pet.name}</div>
-            <div className="font-mono text-[11px] font-bold text-ink-3">УР. {pet.level}</div>
+      {!inPet && (
+        <motion.button type="button" whileTap={{ y: 3 }} onClick={() => go('pet')} className={`${card} text-left`}>
+          <div className="flex items-center gap-3">
+            <Mascot size={54} mood={sad ? 'sad' : 'happy'} anim={sad ? 'tilt' : 'bob'} color={blink.color} skin={blink.skin} />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[14px] font-extrabold">{pet.name}</div>
+              <div className="font-mono text-[11px] font-bold text-ink-3">УР. {pet.level}</div>
+            </div>
+            <Icon name="back" size={16} className="rotate-180 text-ink-3" />
           </div>
-          <Icon name="back" size={16} className="rotate-180 text-ink-3" />
-        </div>
-        <div className="mt-3 flex flex-col gap-1.5">
-          <Bar label="Сытость" value={pet.hunger} color="#16A34A" />
-          <Bar label="Жажда" value={pet.thirst} color="#0EA5E9" />
-          <Bar label="Радость" value={pet.happiness} color="#F59E0B" />
-        </div>
-      </motion.button>
+          <div className="mt-3 flex flex-col gap-1.5">
+            <Bar label="Сытость" value={pet.hunger} color="#16A34A" />
+            <Bar label="Жажда" value={pet.thirst} color="#0EA5E9" />
+            <Bar label="Радость" value={pet.happiness} color="#F59E0B" />
+          </div>
+        </motion.button>
+      )}
 
       {!inShop && (
         <section className="relative overflow-hidden rounded-card bg-acc p-4 text-white shadow-unit-acc">

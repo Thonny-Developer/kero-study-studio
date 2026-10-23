@@ -331,159 +331,168 @@ export function PetScreen() {
 
   return (
     <div className="flex h-full flex-col bg-bg">
-      <div className="flex flex-col gap-3 border-b border-line bg-sf px-4 pb-3" style={{ paddingTop: 'calc(var(--top) + 10px)' }}>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2.5">
-            {/* кольцо прогресса уровня */}
-            <div className="relative grid h-11 w-11 shrink-0 place-items-center">
-              <svg className="absolute inset-0 -rotate-90" viewBox="0 0 44 44" aria-hidden>
-                <circle cx={22} cy={22} r={19} fill="none" stroke="var(--sf2)" strokeWidth={4} />
-                <motion.circle
-                  cx={22}
-                  cy={22}
-                  r={19}
-                  fill="none"
-                  stroke="var(--acc)"
-                  strokeWidth={4}
-                  strokeLinecap="round"
-                  initial={false}
-                  animate={{ pathLength: Math.max(0.03, levelPct / 100) }}
-                  transition={{ type: 'spring', stiffness: 90, damping: 18 }}
-                />
-              </svg>
-              <span className="font-display text-[13px] font-bold text-ink">{pet.level}</span>
+      <div className="flex flex-col gap-3 border-b border-line bg-sf px-4 pb-3 desk:px-8" style={{ paddingTop: 'calc(var(--top) + 10px)' }}>
+        <div className="mx-auto flex w-full flex-col gap-3 desk:max-w-[1040px]">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2.5">
+              {/* кольцо прогресса уровня */}
+              <div className="relative grid h-11 w-11 shrink-0 place-items-center">
+                <svg className="absolute inset-0 -rotate-90" viewBox="0 0 44 44" aria-hidden>
+                  <circle cx={22} cy={22} r={19} fill="none" stroke="var(--sf2)" strokeWidth={4} />
+                  <motion.circle
+                    cx={22}
+                    cy={22}
+                    r={19}
+                    fill="none"
+                    stroke="var(--acc)"
+                    strokeWidth={4}
+                    strokeLinecap="round"
+                    initial={false}
+                    animate={{ pathLength: Math.max(0.03, levelPct / 100) }}
+                    transition={{ type: 'spring', stiffness: 90, damping: 18 }}
+                  />
+                </svg>
+                <span className="font-display text-[13px] font-bold text-ink">{pet.level}</span>
+              </div>
+
+              <AnimatePresence mode="wait" initial={false}>
+                {editingName ? (
+                  <motion.div key="edit" initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5">
+                    <input
+                      value={nameDraft}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') savePetName()
+                        if (e.key === 'Escape') setEditingName(false)
+                      }}
+                      maxLength={18}
+                      autoFocus
+                      className="h-9 w-32 rounded-xl border-[1.5px] border-acc bg-sf2 px-2.5 text-sm font-extrabold text-ink outline-none"
+                    />
+                    <button type="button" onClick={savePetName} className="grid h-9 w-9 place-items-center rounded-xl bg-acc text-white" aria-label="Сохранить">
+                      <Icon name="check" size={16} />
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.button
+                    key="name"
+                    type="button"
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => {
+                      setNameDraft(pet.name)
+                      setEditingName(true)
+                    }}
+                    className="group flex min-w-0 flex-col items-start text-left"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span className="truncate text-[18px] font-extrabold leading-tight tracking-[-0.02em] text-ink">{pet.name}</span>
+                      <Icon name="edit" size={13} className="text-ink-3 opacity-60 transition-opacity group-hover:opacity-100" />
+                    </span>
+                    <span className="font-mono text-[10.5px] font-bold text-ink-3">
+                      {pet.levelXp} / {pet.nextLevelXp} XP до ур. {pet.level + 1}
+                    </span>
+                  </motion.button>
+                )}
+              </AnimatePresence>
             </div>
 
-            <AnimatePresence mode="wait" initial={false}>
-              {editingName ? (
-                <motion.div key="edit" initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5">
-                  <input
-                    value={nameDraft}
-                    onChange={(e) => setNameDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') savePetName()
-                      if (e.key === 'Escape') setEditingName(false)
-                    }}
-                    maxLength={18}
-                    autoFocus
-                    className="h-9 w-32 rounded-xl border-[1.5px] border-acc bg-sf2 px-2.5 text-sm font-extrabold text-ink outline-none"
-                  />
-                  <button type="button" onClick={savePetName} className="grid h-9 w-9 place-items-center rounded-xl bg-acc text-white" aria-label="Сохранить">
-                    <Icon name="check" size={16} />
-                  </button>
-                </motion.div>
-              ) : (
-                <motion.button
-                  key="name"
-                  type="button"
-                  initial={{ opacity: 0, x: -6 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => {
-                    setNameDraft(pet.name)
-                    setEditingName(true)
-                  }}
-                  className="group flex min-w-0 flex-col items-start text-left"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <span className="truncate text-[18px] font-extrabold leading-tight tracking-[-0.02em] text-ink">{pet.name}</span>
-                    <Icon name="edit" size={13} className="text-ink-3 opacity-60 transition-opacity group-hover:opacity-100" />
-                  </span>
-                  <span className="font-mono text-[10.5px] font-bold text-ink-3">
-                    {pet.levelXp} / {pet.nextLevelXp} XP до ур. {pet.level + 1}
-                  </span>
-                </motion.button>
-              )}
-            </AnimatePresence>
+            <motion.button
+              type="button"
+              {...press}
+              onClick={() => go('shop')}
+              className="rail-hide flex shrink-0 items-center gap-1.5 rounded-full border-[1.5px] border-line bg-sf px-3 py-1.5 font-mono text-[13px] font-extrabold text-ink shadow-tip"
+            >
+              <Coin size={17} />
+              <AnimatedNumber value={me.coins} />
+            </motion.button>
           </div>
 
-          <motion.button
-            type="button"
-            {...press}
-            onClick={() => go('shop')}
-            className="rail-hide flex shrink-0 items-center gap-1.5 rounded-full border-[1.5px] border-line bg-sf px-3 py-1.5 font-mono text-[13px] font-extrabold text-ink shadow-tip"
-          >
-            <Coin size={17} />
-            <AnimatedNumber value={me.coins} />
-          </motion.button>
+          <div className="desk:max-w-[420px]">
+            <Segmented
+              value={tab}
+              onChange={setTab}
+              layoutId="pet-tab"
+              items={[
+                ['home', 'Домик', 'home'],
+                ['shop', 'Еда', 'bowl'],
+                ['decor', 'Мебель', 'sofa'],
+              ]}
+            />
+          </div>
         </div>
-
-        <Segmented
-          value={tab}
-          onChange={setTab}
-          layoutId="pet-tab"
-          items={[
-            ['home', 'Домик', 'home'],
-            ['shop', 'Еда', 'bowl'],
-            ['decor', 'Мебель', 'sofa'],
-          ]}
-        />
       </div>
 
-      <div className="no-scrollbar flex-1 overflow-y-auto overflow-x-hidden px-4 pb-[96px] pt-3.5">
+      <div className="no-scrollbar flex-1 overflow-y-auto overflow-x-hidden px-4 pb-[96px] pt-3.5 desk:px-8 desk:pb-10 desk:pt-6">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={tab}
+            className="mx-auto w-full desk:max-w-[1040px]"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
           >
             {tab === 'home' && (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 desk:gap-4">
                 <div className="overflow-hidden rounded-card border-[1.5px] border-line bg-sf shadow-btn-2">
                   <Room equipped={pet.equippedDecor}>{petLayer(true)}</Room>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  <StatCard label="Сытость" icon="bowl" value={pet.hunger} color="#16A34A" />
-                  <StatCard label="Жажда" icon="drop" value={pet.thirst} color="#0EA5E9" />
-                  <StatCard label="Радость" icon="smile" value={pet.happiness} color="#F59E0B" />
-                </div>
+                <div className="flex flex-col gap-3 desk:grid desk:grid-cols-2 desk:gap-4">
+                  <div className="grid grid-cols-3 gap-2">
+                    <StatCard label="Сытость" icon="bowl" value={pet.hunger} color="#16A34A" />
+                    <StatCard label="Жажда" icon="drop" value={pet.thirst} color="#0EA5E9" />
+                    <StatCard label="Радость" icon="smile" value={pet.happiness} color="#F59E0B" />
+                  </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  {(
-                    [
-                      ['Погладить', 'heart', onPat, '#FF5C8A'],
-                      ['Покормить', 'bowl', () => setTab('shop'), '#16A34A'],
-                      ['Обставить', 'sofa', () => setTab('decor'), 'var(--acc)'],
-                    ] as const
-                  ).map(([label, icon, fn, color]) => (
-                    <motion.button
-                      key={label}
-                      type="button"
-                      {...press}
-                      onClick={fn}
-                      className="flex flex-col items-center gap-1.5 rounded-tile border-[1.5px] border-line bg-sf py-3 text-[11.5px] font-extrabold text-ink shadow-btn-2"
-                    >
-                      <span className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: `color-mix(in srgb, ${color} 16%, transparent)`, color }}>
-                        <Icon name={icon} size={18} />
-                      </span>
-                      {label}
-                    </motion.button>
-                  ))}
+                  <div className="grid grid-cols-3 gap-2">
+                    {(
+                      [
+                        ['Погладить', 'heart', onPat, '#FF5C8A'],
+                        ['Покормить', 'bowl', () => setTab('shop'), '#16A34A'],
+                        ['Обставить', 'sofa', () => setTab('decor'), 'var(--acc)'],
+                      ] as const
+                    ).map(([label, icon, fn, color]) => (
+                      <motion.button
+                        key={label}
+                        type="button"
+                        {...press}
+                        onClick={fn}
+                        className="flex flex-col items-center gap-1.5 rounded-tile border-[1.5px] border-line bg-sf py-3 text-[11.5px] font-extrabold text-ink shadow-btn-2"
+                      >
+                        <span className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: `color-mix(in srgb, ${color} 16%, transparent)`, color }}>
+                          <Icon name={icon} size={18} />
+                        </span>
+                        {label}
+                      </motion.button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
 
             {tab === 'shop' && (
               <div className="flex flex-col gap-3">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 desk:max-w-[520px]">
                   <StatCard label="Сытость" icon="bowl" value={pet.hunger} color="#16A34A" />
                   <StatCard label="Жажда" icon="drop" value={pet.thirst} color="#0EA5E9" />
                 </div>
 
-                <Segmented
-                  value={shopFilter}
-                  onChange={setShopFilter}
-                  layoutId="pet-food"
-                  items={[
-                    ['food', 'Еда', 'bowl'],
-                    ['drink', 'Напитки', 'drop'],
-                  ]}
-                />
+                <div className="desk:max-w-[320px]">
+                  <Segmented
+                    value={shopFilter}
+                    onChange={setShopFilter}
+                    layoutId="pet-food"
+                    items={[
+                      ['food', 'Еда', 'bowl'],
+                      ['drink', 'Напитки', 'drop'],
+                    ]}
+                  />
+                </div>
 
-                <motion.div key={shopFilter} variants={listV} initial="hidden" animate="show" className="grid grid-cols-2 gap-2.5">
+                <motion.div key={shopFilter} variants={listV} initial="hidden" animate="show" className="grid grid-cols-2 gap-2.5 desk:grid-cols-4 desk:gap-3">
                   {CONSUMABLES.filter((c) => c.kind === shopFilter).map((item) => {
                     const price = pet.prices[item.id] ?? 0
                     const canAfford = me.coins >= price
@@ -519,8 +528,8 @@ export function PetScreen() {
             )}
 
             {tab === 'decor' && (
-              <div className="flex flex-col gap-3">
-                <div className="overflow-hidden rounded-card border-[1.5px] border-line bg-sf shadow-btn-2">
+              <div className="flex flex-col gap-3 desk:grid desk:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] desk:items-start desk:gap-5">
+                <div className="overflow-hidden rounded-card border-[1.5px] border-line bg-sf shadow-btn-2 desk:sticky desk:top-0">
                   <Room equipped={pet.equippedDecor}>{petLayer(false)}</Room>
                 </div>
 
