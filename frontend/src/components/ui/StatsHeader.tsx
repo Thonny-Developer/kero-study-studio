@@ -16,7 +16,7 @@ function Chip({ icon, color, value }: { icon: IconName | ReactNode; color?: stri
 /** Стрик · XP · сердечки; в магазине — монеты · XP для обмена · сердечки */
 export function StatsHeader({ shop = false }: { shop?: boolean }) {
   const streak = useGame((s) => s.me?.streak ?? 0)
-  const xp = useGame((s) => (shop ? s.me?.xpBalance : s.me?.xp) ?? 0)
+  const xp = useGame((s) => s.me?.xpBalance ?? 0)
   const coins = useGame((s) => s.me?.coins ?? 0)
   const hearts = useGame((s) => s.me?.hearts ?? 0)
   const infiniteHearts = useGame((s) => s.me?.infiniteHearts ?? false)
@@ -31,7 +31,8 @@ export function StatsHeader({ shop = false }: { shop?: boolean }) {
   return (
     <div className="flex gap-1.5">
       <Chip icon="flame" color="var(--gold)" value={streak} />
-      <Chip icon="bolt" color="var(--acc)" value={xp.toLocaleString('ru-RU')} />
+      <Chip icon={<Coin size={17} />} value={<AnimatedNumber value={coins} />} />
+      <Chip icon="bolt" color="var(--acc)" value={<AnimatedNumber value={xp} />} />
       <Chip icon="heart" color="var(--err)" value={infiniteHearts ? '∞' : hearts} />
     </div>
   )

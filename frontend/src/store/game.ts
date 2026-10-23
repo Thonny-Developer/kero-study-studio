@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
 import { api, ApiError, onUnauthorized, setToken } from '../lib/api'
-import type { Course, LessonResult, LessonView, Me, ShopItemId, Track } from '../lib/types'
+import type { Course, LessonResult, LessonView, Me, Shop, ShopItemId, Track } from '../lib/types'
 import { toast } from './toast'
 
 // Вся игровая логика (XP, сердечки, стрик, проверка ответов) — на бэкенде. Здесь только UI-состояние.
@@ -71,9 +71,12 @@ interface Actions {
   rename: (name: string) => Promise<boolean>
   setTrack: (t: Track) => void
   toggleInfiniteHearts: (enabled: boolean) => Promise<void>
+  addAdminXp: (amount?: number) => Promise<void>
   /** Обмен XP → монеты; 'price-changed' — курс сменился, пока юзер смотрел */
-  exchange: (coins: number, price: number) => Promise<boolean | 'price-changed'>
-  buy: (item: ShopItemId) => Promise<boolean>
+  exchange: (coins: number, price: number) => Promise<{ cost: number; shop: Shop } | 'price-changed' | false>
+  /** Обратный обмен: монеты → XP */
+  sellCoins: (coins: number, price: number) => Promise<{ xp: number; shop: Shop } | 'price-changed' | false>
+  buy: (item: ShopItemId) => Promise<Shop | false>
   openNode: (id: string) => Promise<void>
   openProject: (unitId: string) => void
   select: (i: number) => void
@@ -296,12 +299,41 @@ export const useGame = create<GameState>()(
           }
         },
 
+        addAdminXp: async (amount = 500) => {
+          if (get().busy) return
+          set({ busy: true })
+          try {
+            applyMe(await api<Me>('/api/admin/xp', { body: { amount } }))
+            toast(`+${amount.toLocaleString('ru-RU')} XP начислено`)
+          } catch (e) {
+            fail(e)
+          } finally {
+            set({ busy: false })
+          }
+        },
+
         exchange: async (coins, price) => {
           if (get().busy) return false
           set({ busy: true })
           try {
-            applyMe((await api<{ state: Me }>('/api/shop/exchange', { body: { coins, price } })).state)
-            return true
+            const r = await api<{ cost: number; state: Me; shop: Shop }>('/api/shop/exchange', { body: { coins, price } })
+            applyMe(r.state)
+            return { cost: r.cost, shop: r.shop }
+          } catch (e) {
+            fail(e)
+            return e instanceof ApiError && e.code === 'price-changed' ? 'price-changed' : false
+          } finally {
+            set({ busy: false })
+          }
+        },
+
+        sellCoins: async (coins, price) => {
+          if (get().busy) return false
+          set({ busy: true })
+          try {
+            const r = await api<{ xp: number; state: Me; shop: Shop }>('/api/shop/sell', { body: { coins, price } })
+            applyMe(r.state)
+            return { xp: r.xp, shop: r.shop }
           } catch (e) {
             fail(e)
             return e instanceof ApiError && e.code === 'price-changed' ? 'price-changed' : false
@@ -314,8 +346,9 @@ export const useGame = create<GameState>()(
           if (get().busy) return false
           set({ busy: true })
           try {
-            applyMe((await api<{ state: Me }>('/api/shop/buy', { body: { item } })).state)
-            return true
+            const r = await api<{ state: Me; shop: Shop }>('/api/shop/buy', { body: { item } })
+            applyMe(r.state)
+            return r.shop
           } catch (e) {
             fail(e)
             return false

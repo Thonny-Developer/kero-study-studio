@@ -167,7 +167,7 @@ function Wallet({ onExchange }: { onExchange: () => void }) {
   )
 }
 
-function ItemCard({ item, index, price }: { item: Item; index: number; price: number | undefined }) {
+function ItemCard({ item, index, price, onBuy }: { item: Item; index: number; price: number | undefined; onBuy: (s: Shop) => void }) {
   const coins = useGame((s) => s.me?.coins ?? 0)
   const owned = useGame((s) => s.me?.owned.includes(item.id) ?? false)
   const doubleUntil = useGame((s) => (item.id === 'double' ? s.me?.doubleXpUntil : null) ?? null)
@@ -192,7 +192,11 @@ function ItemCard({ item, index, price }: { item: Item; index: number; price: nu
       btn.start({ x: [0, -6, 6, -4, 4, 0], transition: { duration: 0.35 } })
       return
     }
-    if (await buy(item.id)) icon.start({ rotate: [0, -14, 12, -8, 5, 0], scale: [1, 1.25, 1], transition: { duration: 0.55 } })
+    const nextShop = await buy(item.id)
+    if (nextShop) {
+      icon.start({ rotate: [0, -14, 12, -8, 5, 0], scale: [1, 1.25, 1], transition: { duration: 0.55 } })
+      onBuy(nextShop)
+    }
   }
 
   return (
@@ -242,7 +246,7 @@ function ItemCard({ item, index, price }: { item: Item; index: number; price: nu
   )
 }
 
-function ItemsPanel({ shop, onExchange }: { shop: Shop | null; onExchange: () => void }) {
+function ItemsPanel({ shop, onExchange, onShop }: { shop: Shop | null; onExchange: () => void; onShop: (s: Shop) => void }) {
   const [category, setCategory] = useState<Category>('Всё')
   const visible = ITEMS.filter((item) => category === 'Всё' || item.category === category)
   return (
@@ -273,7 +277,7 @@ function ItemsPanel({ shop, onExchange }: { shop: Shop | null; onExchange: () =>
       <div className="mt-3 flex flex-col gap-3">
         <AnimatePresence mode="popLayout">
           {visible.map((item, index) => (
-            <ItemCard key={item.id} item={item} index={index} price={shop?.items[item.id]} />
+            <ItemCard key={item.id} item={item} index={index} price={shop?.items[item.id]} onBuy={onShop} />
           ))}
         </AnimatePresence>
       </div>
@@ -291,7 +295,11 @@ export function ShopScreen() {
       .then(setShop)
       .catch(() => {})
   }, [])
-  useEffect(load, [load])
+  useEffect(() => {
+    load()
+    const t = setInterval(load, 15_000)
+    return () => clearInterval(t)
+  }, [load])
 
   return (
     <MotionConfig reducedMotion="user">
@@ -322,7 +330,7 @@ export function ShopScreen() {
               exit="exit"
               transition={{ duration: 0.18, ease: 'easeOut' }}
             >
-              {tab === 'items' ? <ItemsPanel shop={shop} onExchange={() => setTab('exchange')} /> : <ExchangePanel shop={shop} reload={load} />}
+              {tab === 'items' ? <ItemsPanel shop={shop} onExchange={() => setTab('exchange')} onShop={setShop} /> : <ExchangePanel shop={shop} reload={load} onShop={setShop} />}
             </motion.div>
           </AnimatePresence>
         </main>

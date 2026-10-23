@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
+import { AnimatedNumber } from '../components/ui/AnimatedNumber'
+import { Coin } from '../components/ui/Coin'
 import { MONTHS, MONTHS_GEN, plural, WEEKDAYS } from '../lib/date'
 import { Icon, type IconName } from '../lib/icons'
 import { initials } from '../lib/text'
@@ -119,8 +121,9 @@ export function ProfileScreen() {
   const course = useGame((s) => s.course)
   const theme = useGame((s) => s.theme)
   const busy = useGame((s) => s.busy)
-  const { setTheme, rename, openProject, logout, toggleInfiniteHearts } = useGame.getState()
+  const { setTheme, rename, openProject, logout, toggleInfiniteHearts, addAdminXp } = useGame.getState()
   const [editing, setEditing] = useState(false)
+  const [showStats, setShowStats] = useState(false)
   if (!me || !course) return null
 
   const joined = new Date(me.user.createdAt)
@@ -128,10 +131,15 @@ export function ProfileScreen() {
   const built = (unitId: string) => me.projects.find((p) => p.unitId === unitId)
   const launched = me.projects.filter((p) => p.ready).length
 
-  const stats: { v: string | number; l: string; icon: IconName; c: string }[] = [
+  const mainStats: { v: ReactNode; l: string; icon: IconName | ReactNode; c?: string }[] = [
+    { v: <AnimatedNumber value={me.xpBalance} />, l: 'баланс XP', icon: 'bolt', c: 'var(--acc)' },
+    { v: <AnimatedNumber value={me.coins} />, l: plural(me.coins, 'монета', 'монеты', 'монет'), icon: <Coin size={22} /> },
+  ]
+
+  const extraStats: { v: ReactNode; l: string; icon: IconName | ReactNode; c?: string }[] = [
     { v: me.streak, l: plural(me.streak, 'день стрика', 'дня стрика', 'дней стрика'), icon: 'flame', c: 'var(--gold)' },
-    { v: me.xp.toLocaleString('ru-RU'), l: 'всего XP', icon: 'bolt', c: 'var(--acc)' },
     { v: me.weekXp.toLocaleString('ru-RU'), l: 'XP за неделю', icon: 'league', c: 'var(--code)' },
+    { v: me.xp.toLocaleString('ru-RU'), l: 'всего XP за уроки', icon: 'star', c: 'var(--ok)' },
     { v: launched, l: plural(launched, 'проект', 'проекта', 'проектов'), icon: 'rocket', c: 'var(--mkt)' },
   ]
 
@@ -190,45 +198,82 @@ export function ProfileScreen() {
         <EmailCard me={me} />
 
         {me.isAdmin && (
-          <section className="flex flex-col gap-3 rounded-unit border-[1.5px] border-acc/30 bg-sf p-4">
-            <div>
-              <div className="font-display text-base font-bold">Админ-панель</div>
-              <p className="mt-1 text-[13px] leading-[1.4] text-ink-2">Настройки только для твоего аккаунта.</p>
-            </div>
+          <section className="flex flex-col gap-2.5 rounded-unit border-[1.5px] border-acc/30 bg-sf p-3.5">
+            <div className="font-display text-sm font-bold text-ink-2">Админ</div>
             <button
               type="button"
               role="switch"
               aria-checked={me.infiniteHearts}
               disabled={busy}
               onClick={() => toggleInfiniteHearts(!me.infiniteHearts)}
-              className={['flex min-h-[54px] items-center justify-between rounded-xl border-2 px-3.5 text-left transition-colors', me.infiniteHearts ? 'border-ok bg-ok-soft' : 'border-line bg-bg', busy ? 'opacity-60' : ''].join(' ')}
+              className={['flex min-h-[48px] items-center justify-between rounded-xl border-2 px-3.5 text-left transition-colors', me.infiniteHearts ? 'border-ok bg-ok-soft' : 'border-line bg-bg', busy ? 'opacity-60' : ''].join(' ')}
             >
               <span className="flex items-center gap-2.5">
-                <Icon name="heart" size={20} />
-                <span>
-                  <span className="block text-sm font-bold">Бесконечные сердца</span>
-                  <span className="block text-xs text-ink-2">{me.infiniteHearts ? 'Включены' : 'Выключены'}</span>
-                </span>
+                <Icon name="heart" size={19} />
+                <span className="text-sm font-bold">Бесконечные сердца</span>
               </span>
-              <span className={['grid h-7 w-12 place-items-center rounded-full font-mono text-sm font-extrabold', me.infiniteHearts ? 'bg-ok text-white' : 'bg-sf2 text-ink-3'].join(' ')}>
+              <span className={['grid h-7 w-11 place-items-center rounded-full font-mono text-sm font-extrabold', me.infiniteHearts ? 'bg-ok text-white' : 'bg-sf2 text-ink-3'].join(' ')}>
                 {me.infiniteHearts ? '∞' : '○'}
               </span>
             </button>
+            <div className="flex min-h-[48px] items-center justify-between gap-2 rounded-xl border-2 border-line bg-bg px-3.5 py-2">
+              <span className="flex items-center gap-2.5">
+                <span className="text-acc">
+                  <Icon name="bolt" size={19} />
+                </span>
+                <span className="text-sm font-bold">Накрутка XP</span>
+              </span>
+              <div className="flex shrink-0 gap-1.5">
+                {[100, 500, 2500].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => addAdminXp(amt)}
+                    className="rounded-lg bg-acc-soft px-2.5 py-1.5 font-mono text-xs font-extrabold text-acc-ink transition-transform active:scale-95 disabled:opacity-50"
+                  >
+                    +{amt}
+                  </button>
+                ))}
+              </div>
+            </div>
           </section>
         )}
 
-        <div className="grid grid-cols-2 gap-2.5">
-          {stats.map((p) => (
-            <div key={p.l} className="flex items-center gap-2.5 rounded-btn border-[1.5px] border-line bg-sf px-3.5 py-3">
-              <div style={{ color: p.c }}>
-                <Icon name={p.icon} size={22} />
+        <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-2.5">
+            {(showStats ? [...mainStats, ...extraStats] : mainStats).map((p) => (
+              <div key={p.l} className="flex items-center gap-2.5 rounded-btn border-[1.5px] border-line bg-sf px-3.5 py-3">
+                <div style={p.c ? { color: p.c } : undefined}>
+                  {typeof p.icon === 'string' ? <Icon name={p.icon as IconName} size={22} /> : p.icon}
+                </div>
+                <div className="flex flex-col gap-px">
+                  <span className="font-display text-[17px] font-bold">{p.v}</span>
+                  <span className="text-xs font-semibold text-ink-2">{p.l}</span>
+                </div>
               </div>
-              <div className="flex flex-col gap-px">
-                <span className="font-display text-[17px] font-bold">{p.v}</span>
-                <span className="text-xs font-semibold text-ink-2">{p.l}</span>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowStats((v) => !v)}
+            className="flex items-center justify-center gap-1.5 rounded-xl py-1.5 text-[12px] font-bold text-ink-3 transition-colors hover:text-ink-2"
+          >
+            <span>Подробная статистика</span>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`transition-transform duration-200 ${showStats ? 'rotate-180' : ''}`}
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
         </div>
 
         <Calendar me={me} />

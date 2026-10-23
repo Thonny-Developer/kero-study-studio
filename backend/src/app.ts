@@ -10,7 +10,8 @@ import { answer, buildProject, getProject, getState, league, next, openNode, qui
 import { bad, HttpError } from './http.js'
 import { projectPage } from './page.js'
 import { confirmLink, confirmVerification, finishReset, normEmail, sendReset, sendVerification } from './email.js'
-import { buy, exchange, shopView } from './shop.js'
+import { buy, exchange, sell, shopView } from './shop.js'
+import { dayKey, weekKey } from './time.js'
 import { courseView } from './views.js'
 
 export const app = express()
@@ -165,6 +166,17 @@ app.post('/api/admin/infinite-hearts', requireUser, requireAdmin, async (req, re
   res.json(await getState(user(req)))
 })
 
+app.post('/api/admin/xp', requireUser, requireAdmin, async (req, res) => {
+  const b = parse(z.object({ amount: z.number().int().min(1).max(100_000).default(500) }), req.body ?? {})
+  const u = user(req)
+  const today = dayKey(u.tz)
+  await run(
+    "INSERT INTO xp_events (user_id, amount, reason, day, week, created_at) VALUES (?, ?, 'admin', ?, ?, ?)",
+    [u.id, b.amount, today, weekKey(today), Date.now()],
+  )
+  res.json(await getState(u))
+})
+
 /* ---------- Карта и урок ---------- */
 
 app.post('/api/nodes/:id/open', requireUser, async (req, res) => {
@@ -199,18 +211,26 @@ app.post('/api/lesson/retry', requireUser, async (req, res) => {
 
 /* ---------- Магазин ---------- */
 
-app.get('/api/shop', requireUser, (_req, res) => {
-  res.json(shopView())
+app.get('/api/shop', requireUser, async (_req, res) => {
+  res.json(await shopView())
 })
 
 app.post('/api/shop/exchange', requireUser, async (req, res) => {
   const r = await exchange(user(req), req.body ?? {})
-  res.json({ ...r, state: await getState(user(req)) })
+  const [state, shop] = await Promise.all([getState(user(req)), shopView()])
+  res.json({ ...r, state, shop })
+})
+
+app.post('/api/shop/sell', requireUser, async (req, res) => {
+  const r = await sell(user(req), req.body ?? {})
+  const [state, shop] = await Promise.all([getState(user(req)), shopView()])
+  res.json({ ...r, state, shop })
 })
 
 app.post('/api/shop/buy', requireUser, async (req, res) => {
   await buy(user(req), req.body?.item)
-  res.json({ state: await getState(user(req)) })
+  const [state, shop] = await Promise.all([getState(user(req)), shopView()])
+  res.json({ state, shop })
 })
 
 /* ---------- Лига и проекты ---------- */

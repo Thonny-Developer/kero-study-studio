@@ -5,8 +5,17 @@ const H = 150
 
 export const fmtPrice = (n: number) => n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-const fmtTime = (t: number, week: boolean) =>
-  new Intl.DateTimeFormat('ru-RU', week ? { weekday: 'short', hour: '2-digit', minute: '2-digit' } : { hour: '2-digit', minute: '2-digit' }).format(t)
+export type ChartMode = 'live' | 'day' | 'week'
+
+const fmtTime = (t: number, mode: ChartMode) =>
+  new Intl.DateTimeFormat(
+    'ru-RU',
+    mode === 'week'
+      ? { weekday: 'short', hour: '2-digit', minute: '2-digit' }
+      : mode === 'live'
+        ? { hour: '2-digit', minute: '2-digit', second: '2-digit' }
+        : { hour: '2-digit', minute: '2-digit' },
+  ).format(t)
 
 /** Сглаженная линия через середины отрезков */
 function smooth(pts: [number, number][]) {
@@ -21,7 +30,7 @@ function smooth(pts: [number, number][]) {
 }
 
 /** График курса монеты: линия с заливкой, пульсирующая текущая точка и подсказка по касанию */
-export function PriceChart({ points, week = false }: { points: [number, number][]; week?: boolean }) {
+export function PriceChart({ points, mode = 'day' }: { points: [number, number][]; mode?: ChartMode }) {
   const id = useId().replace(/:/g, '')
   const [hover, setHover] = useState<number | null>(null)
   const box = useRef<HTMLDivElement>(null)
@@ -57,7 +66,7 @@ export function PriceChart({ points, week = false }: { points: [number, number][
   }
   const h = hover === null ? null : xy[hover]
   const pct = (p: [number, number]) => ({ left: `${(p[0] / W) * 100}%`, top: `${(p[1] / H) * 100}%` })
-  const drawKey = `${week}-${points[0][0]}`
+  const drawKey = mode
 
   return (
     <div
@@ -139,7 +148,7 @@ export function PriceChart({ points, week = false }: { points: [number, number][
               style={{ transform: `translateX(${-Math.min(88, Math.max(12, (h[0] / W) * 100))}%)` }}
             >
               <div className="text-[12.5px] font-extrabold leading-tight">{fmtPrice(points[hover][1])} XP</div>
-              <div className="font-mono text-[9.5px] font-bold opacity-70">{fmtTime(points[hover][0], week)}</div>
+              <div className="font-mono text-[9.5px] font-bold opacity-70">{fmtTime(points[hover][0], mode)}</div>
             </div>
           </motion.div>
         )}

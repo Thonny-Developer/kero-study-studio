@@ -41,6 +41,7 @@ const SCHEMA = [
   )`,
   `CREATE INDEX IF NOT EXISTS xp_events_user ON xp_events(user_id)`,
   `CREATE INDEX IF NOT EXISTS xp_events_week ON xp_events(week)`,
+  `CREATE INDEX IF NOT EXISTS xp_events_time ON xp_events(created_at)`,
   // Пройденные уроки, проекты и открытые сундуки
   `CREATE TABLE IF NOT EXISTS runs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,6 +111,7 @@ const SCHEMA = [
     created_at INTEGER NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS coin_events_user ON coin_events(user_id)`,
+  `CREATE INDEX IF NOT EXISTS coin_events_time ON coin_events(created_at)`,
 ]
 
 // Колонки, добавленные после первого релиза: ALTER для уже существующих баз

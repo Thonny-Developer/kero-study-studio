@@ -143,13 +143,26 @@ export interface Project {
 
 export type ShopItemId = 'heart' | 'double' | 'blink' | 'frame'
 
+export interface ShopMarket {
+  /** Давление рынка от -100 (сжигание/скидка) до +100 (высокий спрос) */
+  pressure: number
+  netImpulse: number
+  bought24h: number
+  sold24h: number
+  burned24h: number
+  xp24h: number
+}
+
 /** Курс монеты в XP и цены товаров */
 export interface Shop {
   price: number
+  sellPrice: number
   /** изменение за сутки, % */
   change: number
   nextAt: number
+  live: [number, number][]
   day: [number, number][]
   week: [number, number][]
+  market: ShopMarket
   items: Record<ShopItemId, number>
 }
