@@ -10,7 +10,7 @@ import { answer, buildProject, getProject, getState, league, next, openNode, qui
 import { bad, HttpError } from './http.js'
 import { projectPage } from './page.js'
 import { confirmLink, confirmVerification, finishReset, normEmail, sendReset, sendVerification } from './email.js'
-import { buy, exchange, sell, shopView } from './shop.js'
+import { buy, exchange, isFrameId, isNameColorId, ownedItems, sell, shopView } from './shop.js'
 import { dayKey, weekKey } from './time.js'
 import { courseView } from './views.js'
 
@@ -145,7 +145,15 @@ app.get('/api/me', requireUser, async (req, res) => {
 })
 
 app.patch('/api/me', requireUser, async (req, res) => {
-  const b = parse(z.object({ name: NameSchema.optional(), track: z.enum(['code', 'mkt']).optional() }), req.body)
+  const b = parse(
+    z.object({
+      name: NameSchema.optional(),
+      track: z.enum(['code', 'mkt']).optional(),
+      avatarFrame: z.string().nullable().optional(),
+      nameColor: z.string().nullable().optional(),
+    }),
+    req.body,
+  )
   const u = user(req)
   if (b.name && b.name !== u.name) {
     const key = b.name.toLowerCase()
@@ -156,6 +164,30 @@ app.patch('/api/me', requireUser, async (req, res) => {
   if (b.track) {
     await run('UPDATE users SET track = ? WHERE id = ?', [b.track, u.id])
     u.track = b.track
+  }
+  if (b.avatarFrame !== undefined) {
+    if (b.avatarFrame === null) {
+      await run("UPDATE users SET avatar_frame = 'none' WHERE id = ?", [u.id])
+      u.avatar_frame = 'none'
+    } else {
+      if (!isFrameId(b.avatarFrame)) throw bad('Неизвестная рамка')
+      const owned = await ownedItems(u.id)
+      if (!owned.includes(b.avatarFrame)) throw bad('Сначала купи эту рамку в магазине')
+      await run('UPDATE users SET avatar_frame = ? WHERE id = ?', [b.avatarFrame, u.id])
+      u.avatar_frame = b.avatarFrame
+    }
+  }
+  if (b.nameColor !== undefined) {
+    if (b.nameColor === null) {
+      await run("UPDATE users SET name_color = 'none' WHERE id = ?", [u.id])
+      u.name_color = 'none'
+    } else {
+      if (!isNameColorId(b.nameColor)) throw bad('Неизвестный цвет имени')
+      const owned = await ownedItems(u.id)
+      if (!owned.includes(b.nameColor)) throw bad('Сначала купи этот цвет в магазине')
+      await run('UPDATE users SET name_color = ? WHERE id = ?', [b.nameColor, u.id])
+      u.name_color = b.nameColor
+    }
   }
   res.json(await getState(u))
 })

@@ -23,6 +23,8 @@ export interface UserRow {
   coins: number
   xp_spent: number
   double_xp_until: number | null
+  avatar_frame: string | null
+  name_color: string | null
   streak: number
   max_streak: number
   last_day: string | null

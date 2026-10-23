@@ -123,6 +123,8 @@ const USER_COLUMNS: [string, string][] = [
   ['coins', 'INTEGER NOT NULL DEFAULT 0'],
   ['xp_spent', 'INTEGER NOT NULL DEFAULT 0'],
   ['double_xp_until', 'INTEGER'],
+  ['avatar_frame', 'TEXT'],
+  ['name_color', 'TEXT'],
 ]
 
 let client: Client | null = null

@@ -9,7 +9,7 @@ import { env } from './env.js'
 import { bad, HttpError } from './http.js'
 import { buildArtifact, gradePrompt } from './mistral.js'
 import { dayKey, shiftDay, weekday, weekKey } from './time.js'
-import { ownedItems } from './shop.js'
+import { isFrameId, isNameColorId, ownedItems, type FrameId, type NameColorId } from './shop.js'
 import { publicTask, type PublicTask } from './views.js'
 
 export const MAX_HEARTS = 5
@@ -202,6 +202,20 @@ export async function getState(stale: UserRow) {
     }
   }
 
+  const avatarFrame: FrameId | null =
+    u.avatar_frame === 'none'
+      ? null
+      : u.avatar_frame && isFrameId(u.avatar_frame) && owned.includes(u.avatar_frame)
+        ? u.avatar_frame
+        : ((owned.find(isFrameId) as FrameId | undefined) ?? null)
+
+  const nameColor: NameColorId | null =
+    u.name_color === 'none'
+      ? null
+      : u.name_color && isNameColorId(u.name_color) && owned.includes(u.name_color)
+        ? u.name_color
+        : ((owned.find(isNameColorId) as NameColorId | undefined) ?? null)
+
   return {
     user: { id: u.id, name: u.name, email: u.email, emailVerified: !!u.email_verified, goal: u.goal, level: u.level, mins: u.mins, track: u.track, createdAt: u.created_at },
     isAdmin: !!u.email_verified && env.adminEmails.includes((u.email ?? '').trim().toLowerCase()),
@@ -210,6 +224,8 @@ export async function getState(stale: UserRow) {
     xpBalance: Math.max(0, Number(totals?.xp ?? 0) - u.xp_spent),
     coins: u.coins,
     owned,
+    avatarFrame,
+    nameColor,
     doubleXpUntil: (u.double_xp_until ?? 0) > Date.now() ? u.double_xp_until : null,
     weekXp: Number(totals?.week_xp ?? 0),
     hearts: u.hearts,
@@ -469,8 +485,8 @@ export async function retry(u: UserRow) {
 
 export async function league(u: UserRow) {
   const today = dayKey(u.tz)
-  const rows = await all<{ id: string; name: string; xp: number }>(
-    `SELECT u.id, u.name, COALESCE(SUM(e.amount), 0) AS xp
+  const rows = await all<{ id: string; name: string; avatar_frame: string | null; name_color: string | null; xp: number }>(
+    `SELECT u.id, u.name, u.avatar_frame, u.name_color, COALESCE(SUM(e.amount), 0) AS xp
      FROM users u LEFT JOIN xp_events e ON e.user_id = u.id AND e.week = ?
      GROUP BY u.id ORDER BY xp DESC, u.created_at ASC`,
     [weekKey(today)],
@@ -478,7 +494,15 @@ export async function league(u: UserRow) {
   return {
     daysLeft: 7 - weekday(today),
     total: rows.length,
-    rows: rows.slice(0, 50).map((r, i) => ({ rank: i + 1, id: r.id, name: r.name, xp: Number(r.xp), me: r.id === u.id })),
+    rows: rows.slice(0, 50).map((r, i) => ({
+      rank: i + 1,
+      id: r.id,
+      name: r.name,
+      frame: r.avatar_frame && isFrameId(r.avatar_frame) ? r.avatar_frame : null,
+      nameColor: r.name_color && isNameColorId(r.name_color) ? r.name_color : null,
+      xp: Number(r.xp),
+      me: r.id === u.id,
+    })),
     me: rows.findIndex((r) => r.id === u.id) + 1,
   }
 }

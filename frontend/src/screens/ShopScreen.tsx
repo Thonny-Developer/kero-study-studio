@@ -2,19 +2,20 @@ import { AnimatePresence, motion, MotionConfig, useAnimationControls } from 'fra
 import { useCallback, useEffect, useState } from 'react'
 import { ExchangePanel } from '../components/shop/ExchangePanel'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
+import { Avatar, StyledName } from '../components/ui/Avatar'
 import { Coin } from '../components/ui/Coin'
 import { Logo } from '../components/ui/Logo'
 import { StatsHeader } from '../components/ui/StatsHeader'
 import { api } from '../lib/api'
 import { plural } from '../lib/date'
 import { Icon, type IconName } from '../lib/icons'
-import type { Shop, ShopItemId } from '../lib/types'
+import type { AvatarFrameId, NameColorId, Shop, ShopItemId } from '../lib/types'
 import { useGame } from '../store/game'
 
 type Tab = 'items' | 'exchange'
-type Category = 'Всё' | 'Усилители' | 'Оформление'
+type Category = 'Всё' | 'Усилители' | 'Аватарки' | 'Цвет имени'
 
-const CATEGORIES: Category[] = ['Всё', 'Усилители', 'Оформление']
+const CATEGORIES: Category[] = ['Всё', 'Усилители', 'Аватарки', 'Цвет имени']
 
 interface Item {
   id: ShopItemId
@@ -52,21 +53,203 @@ const ITEMS: Item[] = [
     id: 'blink',
     name: 'Золотой Блинк',
     description: 'Золотой окрас для спутника на карте пути.',
-    category: 'Оформление',
+    category: 'Аватарки',
     icon: 'spark',
     color: 'var(--codeInk)',
     soft: 'var(--codeSoft)',
-    tag: 'Для Блинка',
+    tag: 'Спутник',
   },
+  // Аватарки и эффекты
   {
     id: 'frame',
-    name: 'Золотая рамка',
-    description: 'Яркая рамка вокруг аватара в профиле.',
-    category: 'Оформление',
+    name: 'Золотая корона',
+    description: 'Золотое кольцо с кристаллами вокруг аватара.',
+    category: 'Аватарки',
     icon: 'star',
+    color: 'var(--goldInk)',
+    soft: 'var(--goldSoft)',
+    tag: 'Рамка',
+  },
+  {
+    id: 'frame_emerald',
+    name: 'Изумрудный кристалл',
+    description: 'Гранёная изумрудная оправа с самоцветами.',
+    category: 'Аватарки',
+    icon: 'star',
+    color: 'var(--okInk)',
+    soft: 'var(--okSoft)',
+    tag: 'Рамка',
+  },
+  {
+    id: 'frame_ice',
+    name: 'Арктический шторм',
+    description: 'Ледяное сияние и кружащиеся кристаллы льда.',
+    category: 'Аватарки',
+    icon: 'spark',
+    color: 'var(--codeInk)',
+    soft: 'var(--codeSoft)',
+    tag: 'Анимированная',
+  },
+  {
+    id: 'frame_neon',
+    name: 'Неоновый импульс',
+    description: 'Вращающееся неоновое кольцо с кибер-орбитой.',
+    category: 'Аватарки',
+    icon: 'spark',
+    color: 'var(--codeInk)',
+    soft: 'var(--codeSoft)',
+    tag: 'Анимированная',
+  },
+  {
+    id: 'frame_thunder',
+    name: 'Грозовой разряд',
+    description: 'Электрическая плазма и бегущие дуги молний.',
+    category: 'Аватарки',
+    icon: 'bolt',
+    color: 'var(--goldInk)',
+    soft: 'var(--goldSoft)',
+    tag: 'Анимированная',
+  },
+  {
+    id: 'frame_sakura',
+    name: 'Вишнёвый вихрь',
+    description: 'Нежное розовое свечение и парящие лепестки сакуры.',
+    category: 'Аватарки',
+    icon: 'spark',
     color: 'var(--mktInk)',
     soft: 'var(--mktSoft)',
-    tag: 'Для профиля',
+    tag: 'Анимированная',
+  },
+  {
+    id: 'frame_fire',
+    name: 'Солнечное пламя',
+    description: 'Живая огненная корона с пульсирующими искрами.',
+    category: 'Аватарки',
+    icon: 'flame',
+    color: 'var(--mktInk)',
+    soft: 'var(--mktSoft)',
+    tag: 'Анимированная',
+  },
+  {
+    id: 'frame_glitch',
+    name: 'Кибер-глитч',
+    description: 'Хроматический RGB-сдвиг и сканирующий контур.',
+    category: 'Аватарки',
+    icon: 'code',
+    color: 'var(--codeInk)',
+    soft: 'var(--codeSoft)',
+    tag: 'Анимированная',
+  },
+  {
+    id: 'frame_cosmos',
+    name: 'Квантовая галактика',
+    description: 'Двойная туманность с парящими звёздами по орбите.',
+    category: 'Аватарки',
+    icon: 'spark',
+    color: 'var(--codeInk)',
+    soft: 'var(--codeSoft)',
+    tag: 'Анимированная',
+  },
+  {
+    id: 'frame_dragon',
+    name: 'Дыхание дракона',
+    description: 'Изумрудно-золотая чешуя и огненные руны.',
+    category: 'Аватарки',
+    icon: 'flame',
+    color: 'var(--okInk)',
+    soft: 'var(--okSoft)',
+    tag: 'Легендарная',
+  },
+  {
+    id: 'frame_void',
+    name: 'Чёрная дыра',
+    description: 'Тёмное ядро сингулярности и аккреционный вихрь.',
+    category: 'Аватарки',
+    icon: 'spark',
+    color: 'var(--codeInk)',
+    soft: 'var(--codeSoft)',
+    tag: 'Легендарная',
+  },
+  // Окрасы имени
+  {
+    id: 'color_gold',
+    name: 'Чистое золото',
+    description: 'Золотой металлический градиент для имени.',
+    category: 'Цвет имени',
+    icon: 'star',
+    color: 'var(--goldInk)',
+    soft: 'var(--goldSoft)',
+    tag: 'Градиент имени',
+  },
+  {
+    id: 'color_emerald',
+    name: 'Ядовитый изумруд',
+    description: 'Сочный изумрудно-лаймовый переход.',
+    category: 'Цвет имени',
+    icon: 'star',
+    color: 'var(--okInk)',
+    soft: 'var(--okSoft)',
+    tag: 'Градиент имени',
+  },
+  {
+    id: 'color_sunset',
+    name: 'Малиновый закат',
+    description: 'Яркий градиент от алого заката к пурпуру.',
+    category: 'Цвет имени',
+    icon: 'flame',
+    color: 'var(--mktInk)',
+    soft: 'var(--mktSoft)',
+    tag: 'Градиент имени',
+  },
+  {
+    id: 'color_ocean',
+    name: 'Ледяной аквамарин',
+    description: 'Кристальный лазурно-бирюзовый окрас.',
+    category: 'Цвет имени',
+    icon: 'spark',
+    color: 'var(--codeInk)',
+    soft: 'var(--codeSoft)',
+    tag: 'Градиент имени',
+  },
+  {
+    id: 'color_cyber',
+    name: 'Киберпанк',
+    description: 'Переливающийся неоновый поток с мягким свечением.',
+    category: 'Цвет имени',
+    icon: 'bolt',
+    color: 'var(--codeInk)',
+    soft: 'var(--codeSoft)',
+    tag: 'Анимированный цвет',
+  },
+  {
+    id: 'color_fire',
+    name: 'Живое пламя',
+    description: 'Бегущий огненно-золотой градиент.',
+    category: 'Цвет имени',
+    icon: 'flame',
+    color: 'var(--mktInk)',
+    soft: 'var(--mktSoft)',
+    tag: 'Анимированный цвет',
+  },
+  {
+    id: 'color_aurora',
+    name: 'Северное сияние',
+    description: 'Голографический перелив полярного неба.',
+    category: 'Цвет имени',
+    icon: 'spark',
+    color: 'var(--okInk)',
+    soft: 'var(--okSoft)',
+    tag: 'Анимированный цвет',
+  },
+  {
+    id: 'color_royal',
+    name: 'Имперский рубин',
+    description: 'Сияющий рубиново-золотой королевский окрас.',
+    category: 'Цвет имени',
+    icon: 'star',
+    color: 'var(--err)',
+    soft: 'var(--errSoft)',
+    tag: 'Легендарный цвет',
   },
 ]
 
@@ -169,13 +352,23 @@ function Wallet({ onExchange }: { onExchange: () => void }) {
 
 function ItemCard({ item, index, price, onBuy }: { item: Item; index: number; price: number | undefined; onBuy: (s: Shop) => void }) {
   const coins = useGame((s) => s.me?.coins ?? 0)
+  const userName = useGame((s) => s.me?.user.name ?? '?')
   const owned = useGame((s) => s.me?.owned.includes(item.id) ?? false)
+  const avatarFrame = useGame((s) => s.me?.avatarFrame ?? null)
+  const nameColor = useGame((s) => s.me?.nameColor ?? null)
   const doubleUntil = useGame((s) => (item.id === 'double' ? s.me?.doubleXpUntil : null) ?? null)
   const busy = useGame((s) => s.busy)
   const buy = useGame((s) => s.buy)
+  const setAvatarFrame = useGame((s) => s.setAvatarFrame)
+  const setNameColor = useGame((s) => s.setNameColor)
   const icon = useAnimationControls()
   const btn = useAnimationControls()
   const [now, setNow] = useState(Date.now)
+
+  const isFrame = item.id.startsWith('frame')
+  const isNameColor = item.id.startsWith('color_')
+  const equippable = isFrame || isNameColor
+  const equipped = isFrame ? avatarFrame === item.id : isNameColor ? nameColor === item.id : false
 
   useEffect(() => {
     if (!doubleUntil) return
@@ -208,8 +401,18 @@ function ItemCard({ item, index, price, onBuy }: { item: Item; index: number; pr
       transition={{ type: 'spring', stiffness: 380, damping: 30, delay: index * 0.05 }}
       className="flex items-center gap-3 rounded-card border-[1.5px] border-line bg-sf p-3 shadow-btn-2"
     >
-      <motion.div animate={icon} className="relative grid h-14 w-14 shrink-0 place-items-center rounded-[18px]" style={{ background: item.soft, color: item.color }}>
-        <Icon name={item.icon} size={28} />
+      <motion.div
+        animate={icon}
+        className="relative grid h-14 w-14 shrink-0 place-items-center rounded-[18px]"
+        style={isFrame ? undefined : isNameColor ? { background: 'var(--sf2)' } : { background: item.soft, color: item.color }}
+      >
+        {isFrame ? (
+          <Avatar name={userName} frame={item.id as AvatarFrameId} size={42} />
+        ) : isNameColor ? (
+          <StyledName name="Aa" color={item.id as NameColorId} className="font-display text-[23px] font-extrabold tracking-tight" />
+        ) : (
+          <Icon name={item.icon} size={28} />
+        )}
         {active && (
           <motion.span
             className="absolute inset-0 rounded-[18px] border-2 border-gold"
@@ -220,15 +423,35 @@ function ItemCard({ item, index, price, onBuy }: { item: Item; index: number; pr
       </motion.div>
       <div className="min-w-0 flex-1">
         <span className="font-mono text-[9.5px] font-bold tracking-[.06em] text-ink-3">{item.tag.toUpperCase()}</span>
-        <h3 className="mt-0.5 text-[14.5px] font-extrabold leading-tight text-ink">{item.name}</h3>
+        <h3 className="mt-0.5 text-[14.5px] font-extrabold leading-tight text-ink">
+          {isNameColor ? <StyledName name={item.name} color={item.id as NameColorId} /> : item.name}
+        </h3>
         <p className="mt-0.5 text-[12px] leading-[1.35] text-ink-2">{item.description}</p>
         {active && <div className="mt-1 font-mono text-[10.5px] font-bold text-gold-ink">АКТИВЕН · {mmss(doubleUntil - now)}</div>}
       </div>
       {owned ? (
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-ok-soft px-2.5 py-2 text-[12px] font-extrabold text-ok-ink">
-          <Icon name="check" size={14} />
-          Есть
-        </span>
+        equippable ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              isFrame
+                ? setAvatarFrame(equipped ? null : (item.id as AvatarFrameId))
+                : setNameColor(equipped ? null : (item.id as NameColorId))
+            }
+            className={`inline-flex shrink-0 items-center gap-1 rounded-xl px-2.5 py-2 text-[12px] font-extrabold transition-transform active:scale-95 ${
+              equipped ? 'bg-ok-soft text-ok-ink' : 'bg-acc-soft text-acc-ink'
+            }`}
+          >
+            {equipped && <Icon name="check" size={14} />}
+            {equipped ? 'Надето' : 'Надеть'}
+          </button>
+        ) : (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-ok-soft px-2.5 py-2 text-[12px] font-extrabold text-ok-ink">
+            <Icon name="check" size={14} />
+            Есть
+          </span>
+        )
       ) : (
         <motion.button
           type="button"
@@ -260,13 +483,13 @@ function ItemsPanel({ shop, onExchange, onShop }: { shop: Shop | null; onExchang
         </motion.span>
       </div>
 
-      <div className="mt-3 flex gap-2">
+      <div className="no-scrollbar mt-3 flex gap-1.5 overflow-x-auto pb-0.5">
         {CATEGORIES.map((c) => (
           <button
             key={c}
             type="button"
             onClick={() => setCategory(c)}
-            className={`relative rounded-xl px-3.5 py-1.5 text-[12.5px] font-bold transition-colors ${category === c ? 'text-acc-ink' : 'text-ink-2'}`}
+            className={`relative shrink-0 rounded-xl px-3 py-1.5 text-[12px] font-bold transition-colors ${category === c ? 'text-acc-ink' : 'text-ink-2'}`}
           >
             {category === c && <motion.span layoutId="shop-cat" className="absolute inset-0 rounded-xl bg-acc-soft" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
             <span className="relative">{c}</span>

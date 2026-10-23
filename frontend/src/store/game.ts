@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
 import { api, ApiError, onUnauthorized, setToken } from '../lib/api'
-import type { Course, LessonResult, LessonView, Me, Shop, ShopItemId, Track } from '../lib/types'
+import type { AvatarFrameId, Course, LessonResult, LessonView, Me, NameColorId, Shop, ShopItemId, Track } from '../lib/types'
 import { toast } from './toast'
 
 // Вся игровая логика (XP, сердечки, стрик, проверка ответов) — на бэкенде. Здесь только UI-состояние.
@@ -70,6 +70,8 @@ interface Actions {
   logout: () => Promise<void>
   rename: (name: string) => Promise<boolean>
   setTrack: (t: Track) => void
+  setAvatarFrame: (frame: AvatarFrameId | null) => Promise<void>
+  setNameColor: (color: NameColorId | null) => Promise<void>
   toggleInfiniteHearts: (enabled: boolean) => Promise<void>
   addAdminXp: (amount?: number) => Promise<void>
   /** Обмен XP → монеты; 'price-changed' — курс сменился, пока юзер смотрел */
@@ -285,6 +287,22 @@ export const useGame = create<GameState>()(
         setTrack: (track) => {
           set({ track })
           api<Me>('/api/me', { method: 'PATCH', body: { track } }).catch(() => {})
+        },
+
+        setAvatarFrame: async (avatarFrame) => {
+          try {
+            applyMe(await api<Me>('/api/me', { method: 'PATCH', body: { avatarFrame } }))
+          } catch (e) {
+            fail(e)
+          }
+        },
+
+        setNameColor: async (nameColor) => {
+          try {
+            applyMe(await api<Me>('/api/me', { method: 'PATCH', body: { nameColor } }))
+          } catch (e) {
+            fail(e)
+          }
         },
 
         toggleInfiniteHearts: async (enabled) => {

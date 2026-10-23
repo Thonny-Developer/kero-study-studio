@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion'
 import { Fragment, useEffect, useState } from 'react'
 import { Mascot } from '../components/Mascot'
+import { Avatar, StyledName } from '../components/ui/Avatar'
 import { api, ApiError } from '../lib/api'
 import { plural } from '../lib/date'
 import { Icon } from '../lib/icons'
-import { initials } from '../lib/text'
 import type { League } from '../lib/types'
 
 const AVATAR_COLORS = ['#7A5CFF', '#F25A35', '#16A34A', '#FFB21E', '#5EC8FF', '#E040A0']
@@ -111,13 +111,16 @@ export function LeagueScreen() {
               >
                 {r.rank}
               </span>
-              <div
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-extrabold text-white"
-                style={{ background: r.me ? 'var(--acc)' : AVATAR_COLORS[r.rank % AVATAR_COLORS.length] }}
-              >
-                {initials(r.name)}
-              </div>
-              <span className="flex-1 truncate text-[15px] font-bold">{r.me ? `${r.name} (ты)` : r.name}</span>
+              <Avatar
+                name={r.name}
+                frame={r.frame}
+                size={40}
+                bg={r.me ? 'var(--acc)' : AVATAR_COLORS[r.rank % AVATAR_COLORS.length]}
+              />
+              <span className="flex-1 truncate text-[15px] font-bold">
+                <StyledName name={r.name} color={r.nameColor} />
+                {r.me && <span className="ml-1 text-xs font-semibold text-ink-2">(ты)</span>}
+              </span>
               <span className="font-mono text-[13px] font-bold text-ink-2">{r.xp} XP</span>
             </motion.div>
             {showUp && r.rank === PROMOTE_TOP && <Divider up />}

@@ -254,10 +254,65 @@ export const ITEMS = {
   heart: { price: 15, cosmetic: false },
   double: { price: 40, cosmetic: false },
   blink: { price: 120, cosmetic: true },
+  // Рамки и эффекты аватара
   frame: { price: 80, cosmetic: true },
+  frame_emerald: { price: 95, cosmetic: true },
+  frame_ice: { price: 135, cosmetic: true },
+  frame_neon: { price: 150, cosmetic: true },
+  frame_thunder: { price: 165, cosmetic: true },
+  frame_sakura: { price: 175, cosmetic: true },
+  frame_fire: { price: 180, cosmetic: true },
+  frame_glitch: { price: 210, cosmetic: true },
+  frame_cosmos: { price: 240, cosmetic: true },
+  frame_dragon: { price: 260, cosmetic: true },
+  frame_void: { price: 320, cosmetic: true },
+  // Окрасы имени
+  color_gold: { price: 70, cosmetic: true },
+  color_emerald: { price: 85, cosmetic: true },
+  color_sunset: { price: 100, cosmetic: true },
+  color_ocean: { price: 110, cosmetic: true },
+  color_cyber: { price: 140, cosmetic: true },
+  color_fire: { price: 160, cosmetic: true },
+  color_aurora: { price: 190, cosmetic: true },
+  color_royal: { price: 220, cosmetic: true },
 } as const
 
 export type ItemId = keyof typeof ITEMS
+
+export const FRAME_IDS = [
+  'frame',
+  'frame_emerald',
+  'frame_ice',
+  'frame_neon',
+  'frame_thunder',
+  'frame_sakura',
+  'frame_fire',
+  'frame_glitch',
+  'frame_cosmos',
+  'frame_dragon',
+  'frame_void',
+] as const
+export type FrameId = (typeof FRAME_IDS)[number]
+
+export function isFrameId(id: string): id is FrameId {
+  return (FRAME_IDS as readonly string[]).includes(id)
+}
+
+export const NAME_COLOR_IDS = [
+  'color_gold',
+  'color_emerald',
+  'color_sunset',
+  'color_ocean',
+  'color_cyber',
+  'color_fire',
+  'color_aurora',
+  'color_royal',
+] as const
+export type NameColorId = (typeof NAME_COLOR_IDS)[number]
+
+export function isNameColorId(id: string): id is NameColorId {
+  return (NAME_COLOR_IDS as readonly string[]).includes(id)
+}
 
 export const DOUBLE_XP_MS = 30 * 60 * 1000
 
@@ -326,7 +381,7 @@ export async function buy(u: UserRow, id: unknown) {
   const now = Date.now()
 
   let set = 'coins = coins - ?'
-  const args: (number | null)[] = [price]
+  const args: (number | string | null)[] = [price]
   let guard = ''
   if (item === 'heart') {
     await syncHearts(u)
@@ -338,8 +393,17 @@ export async function buy(u: UserRow, id: unknown) {
     // Повторная покупка продлевает активный бонус
     set += ', double_xp_until = MAX(COALESCE(double_xp_until, 0), ?) + ?'
     args.push(now, DOUBLE_XP_MS)
-  } else if (await one("SELECT 1 FROM coin_events WHERE user_id = ? AND kind = 'buy' AND item = ?", [u.id, item])) {
-    throw bad('Уже куплено', 'owned')
+  } else {
+    if (await one("SELECT 1 FROM coin_events WHERE user_id = ? AND kind = 'buy' AND item = ?", [u.id, item])) {
+      throw bad('Уже куплено', 'owned')
+    }
+    if (isFrameId(item)) {
+      set += ', avatar_frame = ?'
+      args.push(item)
+    } else if (isNameColorId(item)) {
+      set += ', name_color = ?'
+      args.push(item)
+    }
   }
 
   const r = await run(`UPDATE users SET ${set} WHERE id = ? AND coins >= ?${guard}`, [...args, u.id, price])

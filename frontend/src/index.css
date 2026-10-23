@@ -100,3 +100,20 @@ textarea {
   border: 3px solid var(--gold);
   box-shadow: 0 3px 0 var(--goldSh);
 }
+
+@keyframes name-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.name-animated {
+  background-size: 220% auto;
+  animation: name-shimmer 3.2s linear infinite;
+}

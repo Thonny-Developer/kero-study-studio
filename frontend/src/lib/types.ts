@@ -59,6 +59,10 @@ export interface Me {
   coins: number
   /** купленное оформление */
   owned: ShopItemId[]
+  /** надетая рамка аватара */
+  avatarFrame: AvatarFrameId | null
+  /** активный окрас имени */
+  nameColor: NameColorId | null
   doubleXpUntil: number | null
   weekXp: number
   hearts: number
@@ -128,7 +132,7 @@ export interface League {
   daysLeft: number
   total: number
   me: number
-  rows: { rank: number; id: string; name: string; xp: number; me: boolean }[]
+  rows: { rank: number; id: string; name: string; frame: AvatarFrameId | null; nameColor: NameColorId | null; xp: number; me: boolean }[]
 }
 
 export interface Project {
@@ -141,7 +145,30 @@ export interface Project {
   updatedAt: number
 }
 
-export type ShopItemId = 'heart' | 'double' | 'blink' | 'frame'
+export type AvatarFrameId =
+  | 'frame'
+  | 'frame_emerald'
+  | 'frame_ice'
+  | 'frame_neon'
+  | 'frame_thunder'
+  | 'frame_sakura'
+  | 'frame_fire'
+  | 'frame_glitch'
+  | 'frame_cosmos'
+  | 'frame_dragon'
+  | 'frame_void'
+
+export type NameColorId =
+  | 'color_gold'
+  | 'color_emerald'
+  | 'color_sunset'
+  | 'color_ocean'
+  | 'color_cyber'
+  | 'color_fire'
+  | 'color_aurora'
+  | 'color_royal'
+
+export type ShopItemId = 'heart' | 'double' | 'blink' | AvatarFrameId | NameColorId
 
 export interface ShopMarket {
   /** Давление рынка от -100 (сжигание/скидка) до +100 (высокий спрос) */

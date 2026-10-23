@@ -1,9 +1,9 @@
 import { type ReactNode, useState } from 'react'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
+import { Avatar, AVATAR_FRAMES, NAME_COLORS, StyledName } from '../components/ui/Avatar'
 import { Coin } from '../components/ui/Coin'
 import { MONTHS, MONTHS_GEN, plural, WEEKDAYS } from '../lib/date'
 import { Icon, type IconName } from '../lib/icons'
-import { initials } from '../lib/text'
 import type { Me } from '../lib/types'
 import { useGame } from '../store/game'
 
@@ -121,10 +121,13 @@ export function ProfileScreen() {
   const course = useGame((s) => s.course)
   const theme = useGame((s) => s.theme)
   const busy = useGame((s) => s.busy)
-  const { setTheme, rename, openProject, logout, toggleInfiniteHearts, addAdminXp } = useGame.getState()
+  const { setTheme, rename, openProject, logout, toggleInfiniteHearts, addAdminXp, setAvatarFrame, setNameColor } = useGame.getState()
   const [editing, setEditing] = useState(false)
   const [showStats, setShowStats] = useState(false)
   if (!me || !course) return null
+
+  const ownedFrames = AVATAR_FRAMES.filter((f) => me.owned.includes(f.id))
+  const ownedColors = NAME_COLORS.filter((c) => me.owned.includes(c.id))
 
   const joined = new Date(me.user.createdAt)
   const units = (['code', 'mkt'] as const).flatMap((t) => course.tracks[t].map((u, i) => ({ unit: u, index: i, track: t })))
@@ -153,12 +156,8 @@ export function ProfileScreen() {
   return (
     <div className="no-scrollbar absolute inset-0 overflow-y-auto" style={{ paddingTop: 'var(--top)' }}>
       <div className="flex flex-col gap-[18px] px-5 pb-[120px] pt-3">
-        <div className="flex items-center gap-3.5">
-          <div
-            className={`grid h-[72px] w-[72px] shrink-0 place-items-center rounded-[24px] bg-acc font-display text-2xl font-extrabold text-white shadow-btn-acc ${me.owned.includes('frame') ? 'outline outline-[3px] outline-offset-[3px] outline-gold' : ''}`}
-          >
-            {initials(me.user.name) || '?'}
-          </div>
+        <div className="flex items-center gap-4">
+          <Avatar name={me.user.name} frame={me.avatarFrame} size={72} />
           <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
             {editing ? (
               <input
@@ -175,7 +174,7 @@ export function ProfileScreen() {
               />
             ) : (
               <button type="button" onClick={() => setEditing(true)} className="flex items-center gap-2 text-left">
-                <span className="truncate font-display text-xl font-bold tracking-[-.02em]">{me.user.name}</span>
+                <StyledName name={me.user.name} color={me.nameColor} className="truncate font-display text-xl font-bold tracking-[-.02em]" />
                 <span className="text-ink-3">
                   <Icon name="edit" size={16} />
                 </span>
@@ -194,6 +193,65 @@ export function ProfileScreen() {
             <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} />
           </button>
         </div>
+
+        {ownedFrames.length > 0 && (
+          <div className="no-scrollbar flex items-center gap-2 overflow-x-auto py-0.5">
+            <button
+              type="button"
+              onClick={() => setAvatarFrame(null)}
+              className={`shrink-0 rounded-xl border-[1.5px] px-3 py-1.5 text-[12px] font-bold transition-colors ${
+                me.avatarFrame === null ? 'border-acc bg-acc-soft text-acc-ink' : 'border-line bg-sf text-ink-2'
+              }`}
+            >
+              Без рамки
+            </button>
+            {ownedFrames.map((f) => {
+              const active = me.avatarFrame === f.id
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setAvatarFrame(f.id)}
+                  className={`flex shrink-0 items-center gap-2 rounded-xl border-[1.5px] px-2.5 py-1 text-[12px] font-bold transition-colors ${
+                    active ? 'border-acc bg-acc-soft text-acc-ink' : 'border-line bg-sf text-ink-2'
+                  }`}
+                >
+                  <Avatar name={me.user.name} frame={f.id} size={22} />
+                  <span>{f.name}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {ownedColors.length > 0 && (
+          <div className="no-scrollbar flex items-center gap-2 overflow-x-auto py-0.5">
+            <button
+              type="button"
+              onClick={() => setNameColor(null)}
+              className={`shrink-0 rounded-xl border-[1.5px] px-3 py-1.5 text-[12px] font-bold transition-colors ${
+                me.nameColor === null ? 'border-acc bg-acc-soft text-acc-ink' : 'border-line bg-sf text-ink-2'
+              }`}
+            >
+              Обычное имя
+            </button>
+            {ownedColors.map((c) => {
+              const active = me.nameColor === c.id
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setNameColor(c.id)}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-xl border-[1.5px] px-2.5 py-1.5 text-[12px] font-bold transition-colors ${
+                    active ? 'border-acc bg-acc-soft' : 'border-line bg-sf'
+                  }`}
+                >
+                  <StyledName name={c.name} color={c.id} className="font-extrabold" />
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         <EmailCard me={me} />
 
