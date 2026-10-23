@@ -36,6 +36,7 @@ export function RightRail() {
   const me = useGame((s) => s.me)
   const blink = useBlinkLook()
   const go = useGame((s) => s.go)
+  const inShop = useGame((s) => s.screen === 'shop')
   if (!me) return null
   const quest = Math.min(me.todayLessons, me.questGoal)
   const pet = me.pet
@@ -89,23 +90,25 @@ export function RightRail() {
         </div>
       </motion.button>
 
-      <section className="relative overflow-hidden rounded-card bg-acc p-4 text-white shadow-unit-acc">
-        <div className="pointer-events-none absolute -bottom-10 -right-6 h-28 w-28 rounded-full bg-white/[.08]" />
-        <div className="font-mono text-[10.5px] font-bold tracking-[.12em] text-white/75">ТВОИ МОНЕТЫ</div>
-        <div className="mt-1 flex items-center gap-2 font-display text-[28px] font-extrabold leading-none">
-          <Coin size={26} />
-          <AnimatedNumber value={me.coins} />
-        </div>
-        <motion.button
-          type="button"
-          whileTap={{ scale: 0.95 }}
-          onClick={() => go('shop')}
-          className="mt-3 inline-flex items-center gap-1.5 rounded-[10px] bg-white/[.2] px-3 py-1.5 text-[12.5px] font-bold"
-        >
-          <Icon name="gift" size={14} />
-          В магазин
-        </motion.button>
-      </section>
+      {!inShop && (
+        <section className="relative overflow-hidden rounded-card bg-acc p-4 text-white shadow-unit-acc">
+          <div className="pointer-events-none absolute -bottom-10 -right-6 h-28 w-28 rounded-full bg-white/[.08]" />
+          <div className="font-mono text-[10.5px] font-bold tracking-[.12em] text-white/75">ТВОИ МОНЕТЫ</div>
+          <div className="mt-1 flex items-center gap-2 font-display text-[28px] font-extrabold leading-none">
+            <Coin size={26} />
+            <AnimatedNumber value={me.coins} />
+          </div>
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.95 }}
+            onClick={() => go('shop')}
+            className="mt-3 inline-flex items-center gap-1.5 rounded-[10px] bg-white/[.2] px-3 py-1.5 text-[12.5px] font-bold"
+          >
+            <Icon name="gift" size={14} />
+            В магазин
+          </motion.button>
+        </section>
+      )}
     </div>
   )
 }

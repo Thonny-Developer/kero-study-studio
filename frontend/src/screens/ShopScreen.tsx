@@ -611,43 +611,43 @@ export function ShopScreen() {
       <div className="absolute inset-0 flex flex-col" style={{ paddingTop: 'var(--top)' }}>
         <div className="border-b border-line bg-bg px-5 pb-3.5 pt-2 desk:px-8">
           <div className="mx-auto flex w-full items-center justify-between desk:max-w-[920px]">
-          <div className="desk-hide">
-            <Logo size={21} />
-          </div>
-          <h1 className="desk-show font-display text-[26px] font-extrabold tracking-[-.03em]">Магазин</h1>
-          <div className="rail-hide">
-            <StatsHeader shop />
-          </div>
+            <div className="desk-hide">
+              <Logo size={21} />
+            </div>
+            <h1 className="desk-show font-display text-[26px] font-extrabold tracking-[-.03em]">Магазин</h1>
+            <div className="rail-hide">
+              <StatsHeader shop />
+            </div>
           </div>
         </div>
 
         <main className="no-scrollbar flex-1 overflow-y-auto overflow-x-hidden px-5 pb-[112px] pt-4 desk:px-8 desk:pb-10 desk:pt-6">
           <div className="mx-auto w-full desk:max-w-[920px]">
-          <div className="desk:max-w-[360px]">
-          <Segment
-            id="shop-tab"
-            value={tab}
-            onChange={setTab}
-            options={[
-              ['items', 'Товары'],
-              ['exchange', 'Обменник'],
-            ]}
-          />
-          </div>
-          <AnimatePresence mode="wait" initial={false} custom={dir}>
-            <motion.div
-              key={tab}
-              className="mt-4"
-              custom={dir}
-              variants={SLIDE}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-            >
-              {tab === 'items' ? <ItemsPanel shop={shop} onExchange={() => setTab('exchange')} onShop={setShop} /> : <ExchangePanel shop={shop} reload={load} onShop={setShop} />}
-            </motion.div>
-          </AnimatePresence>
+            <div className="desk:max-w-[360px]">
+              <Segment
+                id="shop-tab"
+                value={tab}
+                onChange={setTab}
+                options={[
+                  ['items', 'Товары'],
+                  ['exchange', 'Обменник'],
+                ]}
+              />
+            </div>
+            <AnimatePresence mode="wait" initial={false} custom={dir}>
+              <motion.div
+                key={tab}
+                className="mt-4"
+                custom={dir}
+                variants={SLIDE}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+              >
+                {tab === 'items' ? <ItemsPanel shop={shop} onExchange={() => setTab('exchange')} onShop={setShop} /> : <ExchangePanel shop={shop} reload={load} onShop={setShop} />}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </main>
       </div>
