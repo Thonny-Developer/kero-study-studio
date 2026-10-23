@@ -10,6 +10,7 @@ import { bad, HttpError } from './http.js'
 import { buildArtifact, gradePrompt } from './mistral.js'
 import { dayKey, shiftDay, weekday, weekKey } from './time.js'
 import { isFrameId, isNameColorId, ownedItems, type FrameId, type NameColorId } from './shop.js'
+import { getPetState } from './pet.js'
 import { publicTask, type PublicTask } from './views.js'
 
 export const MAX_HEARTS = 5
@@ -175,7 +176,7 @@ export async function getState(stale: UserRow) {
   await syncHearts(u)
   const today = dayKey(u.tz)
   const week = weekKey(today)
-  const [{ runs, done }, totals, active, projects, quest, owned] = await Promise.all([
+  const [{ runs, done }, totals, active, projects, quest, owned, pet] = await Promise.all([
     progress(u.id),
     one<{ xp: number; week_xp: number }>(
       'SELECT COALESCE(SUM(amount), 0) AS xp, COALESCE(SUM(CASE WHEN week = ? THEN amount END), 0) AS week_xp FROM xp_events WHERE user_id = ?',
@@ -188,6 +189,7 @@ export async function getState(stale: UserRow) {
     ),
     one("SELECT 1 FROM xp_events WHERE user_id = ? AND reason = 'quest' AND day = ?", [u.id, today]),
     ownedItems(u.id),
+    getPetState(u),
   ])
 
   const units: Record<string, { lessons: number; tasks: number; xp: number }> = {}
@@ -226,6 +228,7 @@ export async function getState(stale: UserRow) {
     owned,
     avatarFrame,
     nameColor,
+    pet,
     doubleXpUntil: (u.double_xp_until ?? 0) > Date.now() ? u.double_xp_until : null,
     weekXp: Number(totals?.week_xp ?? 0),
     hearts: u.hearts,

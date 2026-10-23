@@ -63,6 +63,8 @@ export interface Me {
   avatarFrame: AvatarFrameId | null
   /** активный окрас имени */
   nameColor: NameColorId | null
+  /** состояние тамагочи-питомца */
+  pet: PetState
   doubleXpUntil: number | null
   weekXp: number
   hearts: number
@@ -169,6 +171,54 @@ export type NameColorId =
   | 'color_royal'
 
 export type ShopItemId = 'heart' | 'double' | 'blink' | AvatarFrameId | NameColorId
+
+export type PetFoodId =
+  | 'food_cookie'
+  | 'food_ramen'
+  | 'food_pizza'
+  | 'food_burger'
+  | 'food_sushi'
+  | 'food_cake'
+
+export type PetDrinkId =
+  | 'drink_water'
+  | 'drink_coffee'
+  | 'drink_matcha'
+  | 'drink_boba'
+  | 'drink_smoothie'
+  | 'drink_energy'
+
+export type PetDecorId =
+  | 'decor_rug'
+  | 'decor_plant'
+  | 'decor_lamp'
+  | 'decor_poster'
+  | 'decor_window'
+  | 'decor_garland'
+  | 'decor_arcade'
+  | 'decor_cat'
+  | 'decor_crown'
+  | 'decor_glasses'
+  | 'decor_shelf'
+  | 'decor_desk'
+  | 'decor_beanbag'
+
+export type PetConsumableId = PetFoodId | PetDrinkId
+export type PetItemId = PetConsumableId | PetDecorId
+
+export interface PetState {
+  name: string
+  hunger: number
+  thirst: number
+  happiness: number
+  level: number
+  xp: number
+  levelXp: number
+  nextLevelXp: number
+  ownedDecor: PetDecorId[]
+  equippedDecor: PetDecorId[]
+  prices: Record<PetItemId, number>
+}
 
 export interface ShopMarket {
   /** Давление рынка от -100 (сжигание/скидка) до +100 (высокий спрос) */

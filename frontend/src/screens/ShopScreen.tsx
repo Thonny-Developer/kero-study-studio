@@ -13,15 +13,22 @@ import type { AvatarFrameId, NameColorId, Shop, ShopItemId } from '../lib/types'
 import { useGame } from '../store/game'
 
 type Tab = 'items' | 'exchange'
-type Category = 'Всё' | 'Усилители' | 'Аватарки' | 'Цвет имени'
+type Category = 'Каталог' | 'Усилители' | 'Аватарки' | 'Цвет имени'
 
-const CATEGORIES: Category[] = ['Всё', 'Усилители', 'Аватарки', 'Цвет имени']
+const CATEGORIES: Category[] = ['Каталог', 'Усилители', 'Аватарки', 'Цвет имени']
+
+// карточки каталога на первой вкладке витрины
+const CATALOG: { id: Exclude<Category, 'Каталог'>; icon: IconName; color: string; soft: string; description: string }[] = [
+  { id: 'Усилители', icon: 'bolt', color: 'var(--gold)', soft: 'var(--goldSoft)', description: 'Сердца и двойной XP' },
+  { id: 'Аватарки', icon: 'user', color: 'var(--acc)', soft: 'var(--accSoft)', description: 'Рамки и окрас спутника' },
+  { id: 'Цвет имени', icon: 'type', color: 'var(--mkt)', soft: 'var(--mktSoft)', description: 'Градиенты для ника' },
+]
 
 interface Item {
   id: ShopItemId
   name: string
   description: string
-  category: Exclude<Category, 'Всё'>
+  category: Exclude<Category, 'Каталог'>
   icon: IconName
   color: string
   soft: string
@@ -469,17 +476,74 @@ function ItemCard({ item, index, price, onBuy }: { item: Item; index: number; pr
   )
 }
 
+/** Карточка категории в каталоге: иконка, мини-превью товаров, счётчик */
+function CatalogCard({ cat, index, onOpen }: { cat: (typeof CATALOG)[number]; index: number; onOpen: () => void }) {
+  const userName = useGame((s) => s.me?.user.name ?? '?')
+  const ownedIds = useGame((s) => s.me?.owned ?? [])
+  const items = ITEMS.filter((i) => i.category === cat.id)
+  const owned = items.filter((i) => ownedIds.includes(i.id)).length
+  return (
+    <motion.button
+      type="button"
+      layout
+      onClick={onOpen}
+      initial={{ opacity: 0, y: 14, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
+      transition={{ type: 'spring', stiffness: 380, damping: 30, delay: index * 0.06 }}
+      whileTap={{ y: 3, boxShadow: '0 0 0 transparent' }}
+      className="group flex items-center gap-3 rounded-card border-[1.5px] border-line bg-sf p-3 text-left shadow-btn-2"
+    >
+      <motion.span
+        className="grid h-14 w-14 shrink-0 place-items-center rounded-[18px]"
+        style={{ background: cat.soft, color: cat.color }}
+        whileHover={{ rotate: -8, scale: 1.06 }}
+      >
+        <Icon name={cat.icon} size={28} />
+      </motion.span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-extrabold leading-tight text-ink">{cat.id}</span>
+        <span className="mt-0.5 block text-[12px] text-ink-2">{cat.description}</span>
+        <span className="mt-2 flex items-center gap-2">
+          <span className="flex gap-1">
+            {items.slice(0, 3).map((i) => (
+              <span key={i.id} className="grid h-7 w-7 place-items-center rounded-full border-2 border-sf" style={{ background: i.id.startsWith('frame') ? 'transparent' : i.category === 'Цвет имени' ? 'var(--sf2)' : i.soft, color: i.color }}>
+                {i.id.startsWith('frame') ? (
+                  <Avatar name={userName} frame={i.id as AvatarFrameId} size={20} />
+                ) : i.category === 'Цвет имени' ? (
+                  <StyledName name="A" color={i.id as NameColorId} className="font-display text-[12px] font-extrabold" />
+                ) : (
+                  <Icon name={i.icon} size={14} />
+                )}
+              </span>
+            ))}
+          </span>
+          <span className="font-mono text-[10.5px] font-bold text-ink-3">
+            {items.length} {plural(items.length, 'ТОВАР', 'ТОВАРА', 'ТОВАРОВ')}
+            {owned > 0 && <span className="text-ok-ink"> · {owned} ЕСТЬ</span>}
+          </span>
+        </span>
+      </span>
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-sf2 text-ink-2 transition-transform group-hover:translate-x-0.5">
+        <Icon name="back" size={16} className="rotate-180" />
+      </span>
+    </motion.button>
+  )
+}
+
 function ItemsPanel({ shop, onExchange, onShop }: { shop: Shop | null; onExchange: () => void; onShop: (s: Shop) => void }) {
-  const [category, setCategory] = useState<Category>('Всё')
-  const visible = ITEMS.filter((item) => category === 'Всё' || item.category === category)
+  const [category, setCategory] = useState<Category>('Каталог')
+  const visible = ITEMS.filter((item) => item.category === category)
   return (
     <>
       <Wallet onExchange={onExchange} />
 
       <div className="mt-6 flex items-baseline justify-between">
         <h2 className="font-display text-lg font-extrabold tracking-[-.02em]">Витрина</h2>
-        <motion.span key={visible.length} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="font-mono text-[11px] font-bold text-ink-3">
-          {visible.length} {plural(visible.length, 'ПРЕДМЕТ', 'ПРЕДМЕТА', 'ПРЕДМЕТОВ')}
+        <motion.span key={category} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="font-mono text-[11px] font-bold text-ink-3">
+          {category === 'Каталог'
+            ? `${CATALOG.length} ${plural(CATALOG.length, 'КАТЕГОРИЯ', 'КАТЕГОРИИ', 'КАТЕГОРИЙ')}`
+            : `${visible.length} ${plural(visible.length, 'ПРЕДМЕТ', 'ПРЕДМЕТА', 'ПРЕДМЕТОВ')}`}
         </motion.span>
       </div>
 
@@ -499,9 +563,9 @@ function ItemsPanel({ shop, onExchange, onShop }: { shop: Shop | null; onExchang
 
       <div className="mt-3 flex flex-col gap-3">
         <AnimatePresence mode="popLayout">
-          {visible.map((item, index) => (
-            <ItemCard key={item.id} item={item} index={index} price={shop?.items[item.id]} onBuy={onShop} />
-          ))}
+          {category === 'Каталог'
+            ? CATALOG.map((c, index) => <CatalogCard key={c.id} cat={c} index={index} onOpen={() => setCategory(c.id)} />)
+            : visible.map((item, index) => <ItemCard key={item.id} item={item} index={index} price={shop?.items[item.id]} onBuy={onShop} />)}
         </AnimatePresence>
       </div>
     </>

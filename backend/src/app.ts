@@ -11,6 +11,7 @@ import { bad, HttpError } from './http.js'
 import { projectPage } from './page.js'
 import { confirmLink, confirmVerification, finishReset, normEmail, sendReset, sendVerification } from './email.js'
 import { buy, exchange, isFrameId, isNameColorId, ownedItems, sell, shopView } from './shop.js'
+import { buyPetDecor, feedPet, playWithPet, togglePetDecor } from './pet.js'
 import { dayKey, weekKey } from './time.js'
 import { courseView } from './views.js'
 
@@ -263,6 +264,29 @@ app.post('/api/shop/buy', requireUser, async (req, res) => {
   await buy(user(req), req.body?.item)
   const [state, shop] = await Promise.all([getState(user(req)), shopView()])
   res.json({ state, shop })
+})
+
+/* ---------- Питомец (Тамагочи) ---------- */
+
+app.post('/api/pet/feed', requireUser, async (req, res) => {
+  await feedPet(user(req), req.body?.item)
+  res.json({ state: await getState(user(req)) })
+})
+
+app.post('/api/pet/decor/buy', requireUser, async (req, res) => {
+  await buyPetDecor(user(req), req.body?.item)
+  res.json({ state: await getState(user(req)) })
+})
+
+app.post('/api/pet/decor/toggle', requireUser, async (req, res) => {
+  await togglePetDecor(user(req), req.body?.item)
+  res.json({ state: await getState(user(req)) })
+})
+
+app.post('/api/pet/play', requireUser, async (req, res) => {
+  const name = typeof req.body?.name === 'string' ? req.body.name : undefined
+  await playWithPet(user(req), name)
+  res.json({ state: await getState(user(req)) })
 })
 
 /* ---------- Лига и проекты ---------- */

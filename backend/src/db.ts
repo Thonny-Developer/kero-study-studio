@@ -125,6 +125,13 @@ const USER_COLUMNS: [string, string][] = [
   ['double_xp_until', 'INTEGER'],
   ['avatar_frame', 'TEXT'],
   ['name_color', 'TEXT'],
+  ['pet_name', 'TEXT'],
+  ['pet_hunger', 'INTEGER NOT NULL DEFAULT 80'],
+  ['pet_thirst', 'INTEGER NOT NULL DEFAULT 80'],
+  ['pet_happiness', 'INTEGER NOT NULL DEFAULT 85'],
+  ['pet_xp', 'INTEGER NOT NULL DEFAULT 0'],
+  ['pet_updated_at', 'INTEGER'],
+  ['pet_decor', 'TEXT'],
 ]
 
 let client: Client | null = null

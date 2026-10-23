@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
 import { api, ApiError, onUnauthorized, setToken } from '../lib/api'
-import type { AvatarFrameId, Course, LessonResult, LessonView, Me, NameColorId, Shop, ShopItemId, Track } from '../lib/types'
+import type { AvatarFrameId, Course, LessonResult, LessonView, Me, NameColorId, PetConsumableId, PetDecorId, Shop, ShopItemId, Track } from '../lib/types'
 import { toast } from './toast'
 
 // Вся игровая логика (XP, сердечки, стрик, проверка ответов) — на бэкенде. Здесь только UI-состояние.
@@ -10,7 +10,7 @@ import { toast } from './toast'
 export const SB_PASS = 60
 export const XP_PROJECT = 50
 
-export type Screen = 'welcome' | 'onboarding' | 'login' | 'forgot' | 'verify' | 'map' | 'lesson' | 'end' | 'noHearts' | 'project' | 'league' | 'shop' | 'profile'
+export type Screen = 'welcome' | 'onboarding' | 'login' | 'forgot' | 'verify' | 'map' | 'lesson' | 'end' | 'noHearts' | 'project' | 'league' | 'pet' | 'shop' | 'profile'
 export type Theme = 'light' | 'dark'
 
 export interface Draft {
@@ -79,6 +79,10 @@ interface Actions {
   /** Обратный обмен: монеты → XP */
   sellCoins: (coins: number, price: number) => Promise<{ xp: number; shop: Shop } | 'price-changed' | false>
   buy: (item: ShopItemId) => Promise<Shop | false>
+  feedPet: (item: PetConsumableId) => Promise<boolean>
+  buyPetDecor: (item: PetDecorId) => Promise<boolean>
+  togglePetDecor: (item: PetDecorId) => Promise<void>
+  playWithPet: (name?: string) => Promise<boolean>
   openNode: (id: string) => Promise<void>
   openProject: (unitId: string) => void
   select: (i: number) => void
@@ -372,6 +376,56 @@ export const useGame = create<GameState>()(
             return false
           } finally {
             set({ busy: false })
+          }
+        },
+
+        feedPet: async (item) => {
+          if (get().busy) return false
+          set({ busy: true })
+          try {
+            const r = await api<{ state: Me }>('/api/pet/feed', { body: { item } })
+            applyMe(r.state)
+            return true
+          } catch (e) {
+            fail(e)
+            return false
+          } finally {
+            set({ busy: false })
+          }
+        },
+
+        buyPetDecor: async (item) => {
+          if (get().busy) return false
+          set({ busy: true })
+          try {
+            const r = await api<{ state: Me }>('/api/pet/decor/buy', { body: { item } })
+            applyMe(r.state)
+            return true
+          } catch (e) {
+            fail(e)
+            return false
+          } finally {
+            set({ busy: false })
+          }
+        },
+
+        togglePetDecor: async (item) => {
+          try {
+            const r = await api<{ state: Me }>('/api/pet/decor/toggle', { body: { item } })
+            applyMe(r.state)
+          } catch (e) {
+            fail(e)
+          }
+        },
+
+        playWithPet: async (name) => {
+          try {
+            const r = await api<{ state: Me }>('/api/pet/play', { body: name !== undefined ? { name } : {} })
+            applyMe(r.state)
+            return true
+          } catch (e) {
+            fail(e)
+            return false
           }
         },
 

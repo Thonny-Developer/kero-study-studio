@@ -15,12 +15,16 @@
   /* отступы под статус-бар и home-индикатор: в рамке телефона — как в макете, на реальном телефоне — safe-area */
   --top: max(env(safe-area-inset-top), 14px);
   --bottom: max(env(safe-area-inset-bottom), 16px);
+
+  /* комната питомца */
+  --room-wall: #efe8fb; --room-wall2: #e5dbf6; --room-base: #cdbfe8; --room-floor: #e2bf98; --room-floor2: #cfa77c; --room-light: #fff6dc; --room-glow: 1; --pet-tint: 75%;
 }
 [data-theme='dark'] {
   --bg: #0f0e14; --sf: #1a1822; --sf2: #25222e; --ink: #f3f1f8; --ink2: #a9a4b8; --ink3: #6f6a7e;
   --line: #2f2b3a; --lockSh: #0a090d; --page: #08070b; --term: #0a090e; --termLine: #26232f;
   --codeSoft: #251d4a; --mktSoft: #3a1c14; --okSoft: #0f2e1d; --errSoft: #3a1720; --goldSoft: #3a2c0a;
   --okInk: #4ade80; --errInk: #ff7a8a; --codeInk: #a996ff; --mktInk: #ff8a6a; --goldInk: #ffc94d;
+  --room-wall: #2b2442; --room-wall2: #262039; --room-base: #3b3259; --room-floor: #4a3629; --room-floor2: #3c2b20; --room-light: #ffcf7a; --room-glow: 0.35; --pet-tint: 14%;
 }
 [data-track='code'] { --acc: var(--code); --accSh: var(--codeSh); --accSoft: var(--codeSoft); --accInk: var(--codeInk); }
 [data-track='mkt'] { --acc: var(--mkt); --accSh: var(--mktSh); --accSoft: var(--mktSoft); --accInk: var(--mktInk); }

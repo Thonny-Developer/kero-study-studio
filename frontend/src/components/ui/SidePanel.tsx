@@ -12,6 +12,7 @@ export function SidePanel() {
   const jumps: { label: string; screen: Screen }[] = [
     { label: 'Карта пути', screen: 'map' },
     { label: 'Лиги', screen: 'league' },
+    { label: 'Питомец', screen: 'pet' },
     { label: 'Магазин', screen: 'shop' },
     { label: 'Профиль', screen: 'profile' },
   ]
