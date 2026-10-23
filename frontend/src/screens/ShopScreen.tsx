@@ -592,8 +592,13 @@ export function ShopScreen() {
     <MotionConfig reducedMotion="user">
       <div className="absolute inset-0 flex flex-col" style={{ paddingTop: 'var(--top)' }}>
         <div className="flex items-center justify-between border-b border-line bg-bg px-5 pb-3.5 pt-2">
-          <Logo size={21} />
-          <StatsHeader shop />
+          <div className="desk-hide">
+            <Logo size={21} />
+          </div>
+          <h1 className="desk-show font-display text-[26px] font-extrabold tracking-[-.03em]">Магазин</h1>
+          <div className="rail-hide">
+            <StatsHeader shop />
+          </div>
         </div>
 
         <main className="no-scrollbar flex-1 overflow-y-auto overflow-x-hidden px-5 pb-[112px] pt-4">

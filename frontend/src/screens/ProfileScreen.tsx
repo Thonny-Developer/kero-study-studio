@@ -190,7 +190,7 @@ export function ProfileScreen() {
             type="button"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             aria-label="Сменить тему"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border-[1.5px] border-line bg-sf text-ink-2"
+            className="desk-hide grid h-10 w-10 shrink-0 place-items-center rounded-xl border-[1.5px] border-line bg-sf text-ink-2"
           >
             <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} />
           </button>

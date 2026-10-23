@@ -1,4 +1,4 @@
-import { motion, useScroll } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useRef } from 'react'
 import { useState } from 'react'
 import { UnitScene } from '../components/map/Scenes'
@@ -100,15 +100,19 @@ export function MapScreen() {
   const curIndex = cur ? order.indexOf(cur) : Infinity
   let unitStart = 0
   const scroller = useRef<HTMLDivElement>(null)
-  const { scrollY } = useScroll({ container: scroller })
 
   return (
     <div className="absolute inset-0 flex flex-col" style={{ paddingTop: 'var(--top)' }}>
       <div className="relative z-[2] border-b border-line bg-bg px-5 pb-3.5 pt-2">
         <div className="mx-auto flex max-w-[560px] flex-col gap-3.5">
           <div className="flex items-center justify-between">
-            <Logo size={21} />
-            <StatsHeader />
+            <div className="desk-hide">
+              <Logo size={21} />
+            </div>
+            <h1 className="desk-show font-display text-[26px] font-extrabold tracking-[-.03em]">Путь</h1>
+            <div className="rail-hide">
+              <StatsHeader />
+            </div>
           </div>
           <TrackSwitch />
         </div>
@@ -138,7 +142,7 @@ export function MapScreen() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: ui * 0.06 }}
             >
-              <UnitScene index={ui + (track === 'mkt' ? 3 : 0)} scrollY={scrollY} first={ui === 0} last={ui === units.length - 1} />
+              <UnitScene index={ui + (track === 'mkt' ? 3 : 0)} first={ui === 0} last={ui === units.length - 1} />
               <div
                 data-unit-head
                 className={`relative flex items-center gap-3 rounded-unit py-4 pl-[18px] pr-4 ${active ? 'bg-acc text-white shadow-unit-acc' : 'bg-sf2 text-ink-2 shadow-unit-lock'}`}

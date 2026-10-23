@@ -1,10 +1,8 @@
-import { motion, useTransform, type MotionValue } from 'framer-motion'
-import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Mascot } from '../Mascot'
 
 // Фоны юнитов на карте в духе мобильных игр: вид сверху-сбоку, земля с текстурой,
 // дорожка через узлы, по краям ряды деревьев (или их аналогов), на поле — живность.
-// Параллакс: текстура земли едет медленнее контента, верхний слой (облака, птицы) — быстрее.
 // Покадровые анимации — CSS keyframes sc-* из index.css, чтобы скролл не грузил JS.
 
 type Vars = Record<`--${string}`, string>
@@ -73,30 +71,7 @@ function Bird({ body, belly, wing, seed, scale = 1 }: { body: string; belly: str
   )
 }
 
-/** Летящая птица для верхнего слоя (вид сверху) */
-const FlyingBird = ({ c = '#3E3A5C', s = 1 }: { c?: string; s?: number }) =>
-  svg(
-    34 * s,
-    '0 0 34 18',
-    <>
-      <g style={{ transformOrigin: '17px 9px', ...anim('flap', 0.5) }}>
-        <path d="M17 9C12 2 6 1 0 4c6 1 10 4 12 7zM17 9c5-7 11-8 17-5-6 1-10 4-12 7z" fill={c} />
-      </g>
-      <ellipse cx={17} cy={10} rx={3} ry={5} fill={c} />
-    </>,
-    true,
-  )
 
-const Cloud = ({ w, o = 0.85, fill = '#fff' }: { w: number; o?: number; fill?: string }) =>
-  svg(
-    w,
-    '0 0 100 56',
-    <g opacity={o}>
-      <ellipse cx={50} cy={50} rx={44} ry={5} fill="#1A1033" opacity={0.08} />
-      <path d="M16 46a14 14 0 0 1 4-28 19 19 0 0 1 35-8 16 16 0 0 1 28 10 13 13 0 0 1 0 26z" fill={fill} />
-      <path d="M22 22a11 11 0 0 1 12-7" stroke="#fff" strokeWidth={3.5} strokeLinecap="round" opacity={0.7} fill="none" />
-    </g>,
-  )
 
 /** Блинк в костюме — камео на сцене */
 function Blinky({ costume, seed }: { costume: 'space' | 'angel' | 'devil' | 'winter' | 'diver'; seed: number }) {
@@ -299,21 +274,6 @@ const Mushroom = () =>
 const Tuft = ({ c = '#6CC24A' }: { c?: string }) =>
   svg(18, '0 0 18 12', <path d="M2 12q1-7 4-10M7 12q0-8 2-11M12 12q1-7 4-9" stroke={c} strokeWidth={1.8} strokeLinecap="round" fill="none" />)
 
-const Butterfly = ({ c = '#FFB547' }: { c?: string }) =>
-  svg(
-    20,
-    '0 0 24 18',
-    <>
-      <g style={{ transformOrigin: '12px 9px', ...anim('flap', 0.32) }}>
-        <ellipse cx={7} cy={6} rx={6} ry={5} fill={c} />
-        <ellipse cx={17} cy={6} rx={6} ry={5} fill={c} />
-        <ellipse cx={8} cy={13} rx={4} ry={3.5} fill={c} opacity={0.8} />
-        <ellipse cx={16} cy={13} rx={4} ry={3.5} fill={c} opacity={0.8} />
-      </g>
-      <rect x={11} y={3} width={2} height={13} rx={1} fill="#3A2A2A" />
-    </>,
-    true,
-  )
 
 const Bench = () =>
   svg(
@@ -554,17 +514,6 @@ const Ufo = () => (
   </div>
 )
 
-const Comet = () => (
-  <div
-    style={{
-      width: 70,
-      height: 3,
-      borderRadius: 3,
-      background: 'linear-gradient(90deg, transparent, #BDEBFF 70%, #fff)',
-      transform: 'rotate(-28deg)',
-    }}
-  />
-)
 
 /* ═════════════ Рай ═════════════ */
 
@@ -678,20 +627,6 @@ const Bones = () =>
     </>,
   )
 
-const Bat = ({ s = 1 }: { s?: number }) =>
-  svg(
-    40 * s,
-    '0 0 44 22',
-    <>
-      <g style={{ transformOrigin: '22px 10px', ...anim('flap', 0.4) }}>
-        <path d="M22 10C16 2 8 2 1 6c4 1 5 4 5 6 3-2 6-1 8 2 2-2 5-3 8-4zM22 10c6-8 14-8 21-4-4 1-5 4-5 6-3-2-6-1-8 2-2-2-5-3-8-4z" fill="#1A0408" />
-      </g>
-      <ellipse cx={22} cy={11} rx={4} ry={5} fill="#1A0408" />
-      <circle cx={20.5} cy={10} r={1} fill="#FFB547" />
-      <circle cx={23.5} cy={10} r={1} fill="#FFB547" />
-    </>,
-    true,
-  )
 
 /* ═════════════ Океан ═════════════ */
 
@@ -792,21 +727,6 @@ const Crab = ({ seed }: { seed: number }) => (
   </div>
 )
 
-const Fish = ({ c = '#FFB547', c2 = '#FF7A59', s = 1 }: { c?: string; c2?: string; s?: number }) =>
-  svg(
-    32 * s,
-    '0 0 46 26',
-    <>
-      <g style={{ transformOrigin: '34px 13px', ...anim('flap', 0.5) }}>
-        <path d="M34 13l10-10v20z" fill={c2} />
-      </g>
-      <ellipse cx={20} cy={13} rx={17} ry={11} fill={c} />
-      <path d="M14 3c2 6 2 14 0 20M22 2.5c2 6 2 15 0 21" stroke={c2} strokeWidth={3} fill="none" opacity={0.7} />
-      <circle cx={9} cy={11} r={3} fill="#fff" />
-      <circle cx={8.5} cy={11} r={1.6} fill="#16141D" />
-    </>,
-    true,
-  )
 
 const Chest = () =>
   svg(
@@ -913,7 +833,6 @@ const Penguin = ({ seed }: { seed: number }) => (
   </div>
 )
 
-const Flake = ({ s = 12 }: { s?: number }) => svg(s, '0 0 10 10', <path d="M5 0v10M0 5h10M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="#fff" strokeWidth={1.3} strokeLinecap="round" />)
 
 /* ═════════════ Конфетная страна ═════════════ */
 
@@ -1029,7 +948,6 @@ const GummyBear = ({ seed }: { seed: number }) => {
   )
 }
 
-const Sprinkle = ({ c }: { c: string }) => <div className="rounded-full" style={{ width: 8, height: 3, background: c }} />
 
 /* ═════════════ Темы ═════════════ */
 
@@ -1040,7 +958,7 @@ interface Theme {
   day: string
   night: string
   light: boolean
-  /** текстура земли (тайл 80×80), едет с параллаксом */
+  /** текстура земли (тайл 80×80) */
   texture: ReactNode
   path: {
     edge: string
@@ -1056,8 +974,6 @@ interface Theme {
   field: Make[]
   /** живность на поле */
   critters: Make[]
-  /** верхний слой — едет быстрее контента */
-  sky: Make[]
 }
 
 const tex = (children: ReactNode) => children
@@ -1096,7 +1012,6 @@ export const THEMES: Theme[] = [
       () => <Bench />,
       () => <Lamp />,
     ],
-    sky: [(s) => <Cloud w={90 + rnd(s, 1) * 50} o={0.75} />, () => <FlyingBird />, (s) => <Cloud w={70 + rnd(s, 1) * 40} o={0.7} />, () => <Butterfly c="#FF6F91" />],
   },
   // Город
   {
@@ -1114,7 +1029,6 @@ export const THEMES: Theme[] = [
     side: [(s) => <Building seed={s} />, (s) => <Building seed={s + 7} />, (s) => <StreetTree seed={s} />],
     field: [() => <Hydrant />, (s) => <StreetTree seed={s} />, (s) => <Car seed={s} />],
     critters: [(s) => <Bird body="#9A93B0" belly="#C8C2D6" wing="#6E6888" seed={s} />, (s) => <Bird body="#9A93B0" belly="#B0E0C8" wing="#6E6888" seed={s} />, () => <Lamp />],
-    sky: [(s) => <Cloud w={90 + rnd(s, 1) * 40} o={0.6} />, () => <FlyingBird c="#5C5680" />],
   },
   // Космос
   {
@@ -1141,7 +1055,6 @@ export const THEMES: Theme[] = [
     side: [(s) => <Asteroid seed={s} />, (s) => <Crystal seed={s} />, (s) => <Asteroid seed={s + 3} />],
     field: [(s) => <Sparkle c={['#fff', '#FFE58A', '#BDEBFF'][s % 3]} s={6 + (s % 3) * 3} />, (s) => <Crystal seed={s} />],
     critters: [(s) => <Alien seed={s} />, (s) => <Blinky costume="space" seed={s} />, (s) => <MiniPlanet seed={s} />, () => <Ufo />],
-    sky: [() => <Comet />, (s) => <Sparkle c="#fff" s={10 + (s % 3) * 3} />],
   },
   // Рай
   {
@@ -1166,7 +1079,6 @@ export const THEMES: Theme[] = [
     side: [(s) => <CloudPuff seed={s} />, () => <Column />, (s) => <CloudPuff seed={s + 2} />],
     field: [(s) => <Sparkle c="#FFD166" s={7 + (s % 3) * 3} />, () => <Feather />, (s) => <Flowers seed={s} />],
     critters: [(s) => <Dove seed={s} />, (s) => <Blinky costume="angel" seed={s} />, (s) => <Dove seed={s + 1} />],
-    sky: [(s) => <Cloud w={100 + rnd(s, 1) * 50} o={0.85} />, () => <FlyingBird c="#fff" />],
   },
   // Ад
   {
@@ -1184,7 +1096,6 @@ export const THEMES: Theme[] = [
     side: [(s) => <Spire seed={s} />, (s) => <LavaPool seed={s} />, (s) => <Flame seed={s} />],
     field: [(s) => <Flame seed={s} />, () => <Bones />, (s) => <Stone seed={s} c="#4A1A16" c2="#6A2A20" />],
     critters: [(s) => <Blinky costume="devil" seed={s} />, (s) => <LavaPool seed={s + 5} />],
-    sky: [(s) => <Bat s={0.8 + rnd(s, 1) * 0.5} />, () => <div className="h-2 w-2 rounded-full bg-[#FFB547] shadow-[0_0_8px_#FF5A1F]" />],
   },
   // Океан
   {
@@ -1202,14 +1113,6 @@ export const THEMES: Theme[] = [
     side: [(s) => <Coral seed={s} />, (s) => <Seaweed seed={s} />, (s) => <Coral seed={s + 4} />, (s) => <Seaweed seed={s + 1} />],
     field: [(s) => <Starfish seed={s} />, () => <Shell />, (s) => <Stone seed={s} c="#9FB8B0" c2="#C3D8D0" />],
     critters: [(s) => <Crab seed={s} />, (s) => <Blinky costume="diver" seed={s} />, () => <Chest />, (s) => <Crab seed={s + 2} />],
-    sky: [
-      (s) => (
-        <div style={{ transform: rnd(s, 1) > 0.5 ? 'scaleX(-1)' : undefined }}>
-          <Fish c={['#FFB547', '#4FB3F6', '#FF8FB1'][s % 3]} c2={['#FF7A59', '#2E7FD1', '#E5487A'][s % 3]} s={0.8 + rnd(s, 2) * 0.6} />
-        </div>
-      ),
-      (s) => <div className="rounded-full border-2 border-white/80 bg-white/20" style={{ width: 8 + (s % 4) * 3, height: 8 + (s % 4) * 3 }} />,
-    ],
   },
   // Зима
   {
@@ -1233,7 +1136,6 @@ export const THEMES: Theme[] = [
     side: [(s) => <SnowPine seed={s} />, (s) => <SnowPine seed={s + 4} />, (s) => <SnowPile seed={s} />],
     field: [(s) => <SnowPile seed={s} />, (s) => <Stone seed={s} c="#B8C4D8" c2="#fff" />],
     critters: [(s) => <Bullfinch seed={s} />, (s) => <Penguin seed={s} />, () => <Snowman />, (s) => <Blinky costume="winter" seed={s} />, (s) => <Bullfinch seed={s + 1} />],
-    sky: [(s) => <Flake s={10 + (s % 4) * 4} />, (s) => <Cloud w={80 + rnd(s, 1) * 40} o={0.55} fill="#F4F8FF" />],
   },
   // Конфетная страна
   {
@@ -1258,7 +1160,6 @@ export const THEMES: Theme[] = [
     side: [(s) => <LollipopTree seed={s} />, () => <CandyCane />, (s) => <Gumdrop seed={s + 5} />, () => <Cupcake />],
     field: [(s) => <Gumdrop seed={s} />, (s) => <Gumdrop seed={s + 1} />],
     critters: [(s) => <GummyBear seed={s} />, (s) => <GummyBear seed={s + 3} />, () => <Cupcake />],
-    sky: [(s) => <Cloud w={80 + rnd(s, 1) * 40} o={0.85} fill={rnd(s, 2) > 0.5 ? '#FFD1E8' : '#E6DCFF'} />, (s) => <Sprinkle c={['#FF6FA8', '#FFD166', '#4FB3F6'][s % 3]} />],
   },
 ]
 
@@ -1299,7 +1200,6 @@ interface Placed {
 
 function layout(t: Theme, seed: number, w: number, h: number, path: Pt[]) {
   const ground: Placed[] = []
-  const sky: Placed[] = []
   let k = 0
   // ряды по краям; на широком экране — несколько рядов, вплоть до дорожки
   const cols = Math.max(1, Math.floor((w / 2 - 170) / 62))
@@ -1335,17 +1235,8 @@ function layout(t: Theme, seed: number, w: number, h: number, path: Pt[]) {
       el: pool[Math.floor(rnd(i, seed + 13) * pool.length)](seed * 1000 + i),
     })
   }
-  // верхний слой с запасом сверху и снизу: он сдвигается параллаксом
-  const n = Math.round((h / 150) * area)
-  for (let i = 0; i < n; i++) {
-    sky.push({
-      x: rnd(i, seed + 20) * w,
-      y: -120 + rnd(i, seed + 21) * (h + 240),
-      el: t.sky[Math.floor(rnd(i, seed + 22) * t.sky.length)](seed * 10 + i),
-    })
-  }
   ground.sort((a, b) => a.y - b.y)
-  return { ground, sky }
+  return ground
 }
 
 const TILE = 80
@@ -1443,40 +1334,39 @@ function CloudBand({ seed }: { seed: number }) {
   )
 }
 
-/** Фон юнита: земля с параллакс-текстурой, дорожка через узлы, декор по краям, живность, верхний слой. */
-export function UnitScene({ index, scrollY, first, last }: { index: number; scrollY: MotionValue<number>; first: boolean; last: boolean }) {
+/** Фон юнита: земля с текстурой, дорожка через узлы, декор по краям, живность.
+ * Декор строится только рядом с экраном и выгружается вдали; вне экрана анимации на паузе. */
+export function UnitScene({ index, first, last }: { index: number; first: boolean; last: boolean }) {
   const t = THEMES[index % THEMES.length]
   const ref = useRef<HTMLDivElement>(null)
   const world = useRef<HTMLDivElement>(null)
-  const [geo, setGeo] = useState<{
-    w: number
-    h: number
-    top: number
-    pts: Pt[]
-  } | null>(null)
+  const [geo, setGeo] = useState<{ w: number; h: number; pts: Pt[] } | null>(null)
+  const [near, setNear] = useState(false)
+  const [visible, setVisible] = useState(false)
   const pid = `sc${index}`
 
   useLayoutEffect(() => {
     const el = world.current
     const section = ref.current?.parentElement
     if (!el || !section) return
+    let last = ''
     const measure = () => {
       const box = el.getBoundingClientRect()
-      const scroller = el.closest('[data-map-scroll]')
-      const sTop = scroller ? scroller.getBoundingClientRect().top - scroller.scrollTop : 0
       const head = section.querySelector('[data-unit-head]')?.getBoundingClientRect()
       const nodes = [...section.querySelectorAll('[data-node]')].map((n) => {
         const r = n.getBoundingClientRect()
-        return [r.left + r.width / 2 - box.left, r.top + r.height / 2 - box.top] as Pt
+        return [Math.round(r.left + r.width / 2 - box.left), Math.round(r.top + r.height / 2 - box.top)] as Pt
       })
-      const start: Pt[] = head ? [[box.width / 2, head.bottom - box.top - 8]] : []
-      const end: Pt[] = nodes.length ? [[box.width / 2, box.height + 4]] : []
-      setGeo({
-        w: box.width,
-        h: box.height,
-        top: box.top - sTop,
-        pts: [...start, ...nodes, ...end],
-      })
+      const w = Math.round(box.width)
+      const h = Math.round(box.height)
+      const start: Pt[] = head ? [[w / 2, Math.round(head.bottom - box.top - 8)]] : []
+      const end: Pt[] = nodes.length ? [[w / 2, h + 4]] : []
+      const pts = [...start, ...nodes, ...end]
+      // ResizeObserver срабатывает часто — пересчитываем раскладку, только если геометрия реально изменилась
+      const key = `${w}|${h}|${pts.join(';')}`
+      if (key === last) return
+      last = key
+      setGeo({ w, h, pts })
     }
     measure()
     const ro = new ResizeObserver(measure)
@@ -1484,12 +1374,21 @@ export function UnitScene({ index, scrollY, first, last }: { index: number; scro
     return () => ro.disconnect()
   }, [])
 
-  const placed = useMemo(() => (geo ? layout(t, index + 1, geo.w, geo.h, geo.pts) : null), [geo, t, index])
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const root = el.closest('[data-map-scroll]')
+    const nearIo = new IntersectionObserver(([e]) => setNear(e.isIntersecting), { root, rootMargin: '900px 0px' })
+    const visIo = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { root })
+    nearIo.observe(el)
+    visIo.observe(el)
+    return () => {
+      nearIo.disconnect()
+      visIo.disconnect()
+    }
+  }, [])
 
-  // текстура земли отстаёт от контента (бесшовно — сдвиг по модулю тайла)
-  const groundY = useTransform(scrollY, (v) => (v * 0.3) % TILE)
-  // верхний слой обгоняет контент; ноль, когда юнит в середине экрана
-  const skyY = useTransform(scrollY, (v) => (geo ? -(v - geo.top + 300) * 0.35 : 0))
+  const placed = useMemo(() => (geo && near ? layout(t, index + 1, geo.w, geo.h, geo.pts) : null), [geo, near, t, index])
 
   // мягкое затухание только у первой (сверху) и последней (снизу) сцены, между юнитами — облака
   const fade = `linear-gradient(180deg, ${first ? 'transparent 0, #000 40px' : '#000 0'}, ${last ? '#000 calc(100% - 40px), transparent 100%' : '#000 100%'})`
@@ -1498,13 +1397,14 @@ export function UnitScene({ index, scrollY, first, last }: { index: number; scro
   return (
     <div
       ref={ref}
-      className="map-scene pointer-events-none absolute -bottom-3 overflow-hidden"
+      className={`map-scene pointer-events-none absolute -bottom-3 overflow-hidden ${visible ? '' : 'sc-paused'}`}
       data-light={t.light ? '' : undefined}
       style={
         {
           top: first ? -12 : -BAND_UP,
           left: BLEED,
           right: BLEED,
+          contain: 'layout paint style',
           '--sky-day': t.day,
           '--sky-night': t.night,
         } as CSSProperties
@@ -1520,7 +1420,7 @@ export function UnitScene({ index, scrollY, first, last }: { index: number; scro
           WebkitMaskImage: fade,
         }}
       >
-        <motion.div className="sc-deco sc-tex absolute inset-x-0" style={{ top: -TILE, bottom: 0, y: groundY }}>
+        <div className="sc-tex absolute inset-0">
           <svg width="100%" height="100%">
             <defs>
               <pattern id={`${pid}t`} width={TILE} height={TILE} patternUnits="userSpaceOnUse">
@@ -1529,68 +1429,46 @@ export function UnitScene({ index, scrollY, first, last }: { index: number; scro
             </defs>
             <rect width="100%" height="100%" fill={`url(#${pid}t)`} />
           </svg>
-        </motion.div>
+        </div>
 
-        {geo && (
-          <svg className="sc-path absolute inset-0" width={geo.w} height={geo.h}>
-            {t.path.glow && <path d={d} stroke="#8CFFC1" strokeOpacity={0.12} strokeWidth={56} fill="none" strokeLinecap="round" />}
-            <path d={d} stroke="#1A1033" strokeOpacity={0.12} strokeWidth={42} fill="none" strokeLinecap="round" transform="translate(0 4)" />
-            <path d={d} stroke={t.path.edge} strokeWidth={40} fill="none" strokeLinecap="round" />
-            <path d={d} stroke={t.path.fill} strokeWidth={30} fill="none" strokeLinecap="round" />
-            <path
-              d={d}
-              stroke={t.path.detail}
-              strokeWidth={t.path.dw}
-              strokeDasharray={t.path.dash}
-              strokeLinecap={t.path.dw > 10 ? 'butt' : 'round'}
-              fill="none"
-              style={t.path.glow ? anim('pulse', 2, 0, { '--lo': '0.4' }) : undefined}
-            />
+        {geo && near && (
+          <svg className="absolute inset-0" width={geo.w} height={geo.h}>
+            {/* дорожка «прорисовывается» при появлении */}
+            <g className="sc-draw">
+              {t.path.glow && <path d={d} pathLength={1} stroke="#8CFFC1" strokeOpacity={0.12} strokeWidth={56} fill="none" strokeLinecap="round" />}
+              <path d={d} pathLength={1} stroke="#1A1033" strokeOpacity={0.12} strokeWidth={42} fill="none" strokeLinecap="round" transform="translate(0 4)" />
+              <path d={d} pathLength={1} stroke={t.path.edge} strokeWidth={40} fill="none" strokeLinecap="round" />
+              <path d={d} pathLength={1} stroke={t.path.fill} strokeWidth={30} fill="none" strokeLinecap="round" />
+            </g>
+            <g className="sc-fade-late">
+              <path
+                d={d}
+                stroke={t.path.detail}
+                strokeWidth={t.path.dw}
+                strokeDasharray={t.path.dash}
+                strokeLinecap={t.path.dw > 10 ? 'butt' : 'round'}
+                fill="none"
+                style={t.path.glow ? anim('pulse', 2, 0, { '--lo': '0.4' }) : undefined}
+              />
+            </g>
           </svg>
         )}
 
-        {placed && (
-          <div className="sc-deco absolute inset-0">
-            {placed.ground.map((p, i) => (
-              <div
-                key={i}
-                className="absolute"
-                style={{
-                  left: p.x,
-                  top: p.y,
-                  transform: 'translate(-50%, -100%)',
-                }}
-              >
-                {p.el}
+        {placed && geo && (
+          <div className="absolute inset-0">
+            {placed.map((p, i) => (
+              <div key={i} className="absolute" style={{ left: p.x, top: p.y, transform: 'translate(-50%, -100%)' }}>
+                {/* предметы выпрыгивают сверху вниз, волной вдоль сцены */}
+                <div className="sc-pop" style={{ animationDelay: `${0.1 + (p.y / geo.h) * 0.7 + rnd(i, index) * 0.15}s` }}>
+                  {p.el}
+                </div>
               </div>
             ))}
           </div>
         )}
 
-        {placed && (
-          <motion.div className="sc-deco absolute inset-0" style={{ y: skyY }}>
-            {placed.sky.map((p, i) => (
-              <div
-                key={i}
-                className="absolute"
-                style={{
-                  left: p.x,
-                  top: p.y,
-                  transform: 'translate(-50%, -50%)',
-                }}
-              >
-                <div
-                  style={{
-                    ...anim('drift', 9 + rnd(i, index + 30) * 8, rnd(i, index + 31) * 9, { '--from': '-36px', '--to': '36px' }),
-                    animationDirection: 'alternate',
-                  }}
-                >
-                  {p.el}
-                </div>
-              </div>
-            ))}
-          </motion.div>
-        )}
+        {/* ночь для светлых тем: дешёвый оверлей вместо CSS-фильтра на анимированном слое */}
+        <div className="sc-dim absolute inset-0" />
       </div>
       {!first && <CloudBand seed={index * 7 + 3} />}
     </div>

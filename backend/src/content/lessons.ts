@@ -1,4 +1,5 @@
 import type { PathNode, Track, Unit } from './types.js'
+import { EXTRA_C1, EXTRA_C2, EXTRA_M1, EXTRA_M2 } from './extra-lessons.js'
 import { NEXT_UNITS } from './next-units.js'
 
 /**
@@ -323,6 +324,7 @@ export const COURSE: Record<Track, Unit[]> = {
             },
           ],
         },
+        ...EXTRA_C1,
         {
           id: 'c1-p',
           kind: 'project',
@@ -656,6 +658,7 @@ export const COURSE: Record<Track, Unit[]> = {
             },
           ],
         },
+        ...EXTRA_C2,
         {
           id: 'c2-p',
           kind: 'project',
@@ -974,6 +977,7 @@ export const COURSE: Record<Track, Unit[]> = {
             },
           ],
         },
+        ...EXTRA_M1,
         {
           id: 'm1-p',
           kind: 'project',
@@ -1269,6 +1273,7 @@ export const COURSE: Record<Track, Unit[]> = {
             },
           ],
         },
+        ...EXTRA_M2,
         {
           id: 'm2-p',
           kind: 'project',

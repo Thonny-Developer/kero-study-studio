@@ -34,6 +34,13 @@
   --top: 16px;
   --bottom: 16px;
 }
+/* шапки экранов: на десктопе логотип и тема живут в боковом меню, статы — в правой колонке */
+.desk-show { display: none; }
+.desk .desk-show { display: block; }
+.desk .desk-hide { display: none; }
+@media (min-width: 1200px) {
+  .desk .rail-hide { display: none; }
+}
 
 html,
 body,
@@ -147,8 +154,23 @@ textarea {
 [data-theme='dark'] .map-scene .sc-world { background: var(--sky-night); }
 .sc-band { --cl-back: #dbe4fa; --cl-front: #ffffff; --cl-low: #e4ebfb; --cl-shade: #c9d5f0; }
 [data-theme='dark'] .sc-band { --cl-back: #36345a; --cl-front: #4a4772; --cl-low: #3d3a63; --cl-shade: #2a2848; }
-[data-theme='dark'] .map-scene[data-light] .sc-deco { filter: brightness(0.72) saturate(1.1); }
-[data-theme='dark'] .map-scene[data-light] .sc-path { filter: brightness(0.62); }
+[data-theme='dark'] .map-scene[data-light] .sc-dim { background: rgba(10, 8, 30, 0.32); }
+
+/* сцена вне экрана: анимации на паузе */
+.sc-paused, .sc-paused * { animation-play-state: paused !important; }
+
+/* появление сцены */
+@keyframes sc-draw-in { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes sc-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sc-pop-in {
+  0% { opacity: 0; transform: translateY(10px) scale(0.6); }
+  70% { opacity: 1; transform: translateY(-2px) scale(1.06); }
+  100% { opacity: 1; transform: none; }
+}
+.sc-draw path { stroke-dasharray: 1; animation: sc-draw-in 1.1s cubic-bezier(0.3, 0.7, 0.3, 1) both; }
+.sc-fade-late { animation: sc-fade-in 0.5s ease-out 0.8s both; }
+.sc-pop { transform-origin: 50% 100%; animation: sc-pop-in 0.45s cubic-bezier(0.3, 0.7, 0.3, 1.2) both; }
+.sc-world { animation: sc-fade-in 0.4s ease-out both; }
 @media (prefers-reduced-motion: reduce) {
   .map-scene * { animation: none !important; }
 }

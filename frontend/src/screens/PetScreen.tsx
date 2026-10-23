@@ -400,7 +400,7 @@ export function PetScreen() {
             type="button"
             {...press}
             onClick={() => go('shop')}
-            className="flex shrink-0 items-center gap-1.5 rounded-full border-[1.5px] border-line bg-sf px-3 py-1.5 font-mono text-[13px] font-extrabold text-ink shadow-tip"
+            className="rail-hide flex shrink-0 items-center gap-1.5 rounded-full border-[1.5px] border-line bg-sf px-3 py-1.5 font-mono text-[13px] font-extrabold text-ink shadow-tip"
           >
             <Coin size={17} />
             <AnimatedNumber value={me.coins} />
