@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from 'framer-motion'
 import { type ReactNode, useState } from 'react'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import { Avatar, AVATAR_FRAMES, NAME_COLORS, StyledName } from '../components/ui/Avatar'
@@ -117,6 +118,16 @@ function EmailCard({ me }: { me: Me }) {
   )
 }
 
+// свёрнутость админ-меню помним между заходами
+const ADMIN_KEY = 'vibely-admin-open'
+const readAdminOpen = () => {
+  try {
+    return localStorage.getItem(ADMIN_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+
 export function ProfileScreen() {
   const me = useGame((s) => s.me)
   const course = useGame((s) => s.course)
@@ -126,6 +137,14 @@ export function ProfileScreen() {
   const [editing, setEditing] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
+  const [adminOpen, setAdminOpen] = useState(readAdminOpen)
+  const toggleAdmin = () =>
+    setAdminOpen((v) => {
+      try {
+        localStorage.setItem(ADMIN_KEY, v ? '0' : '1')
+      } catch {}
+      return !v
+    })
   if (!me || !course) return null
 
   const ownedFrames = AVATAR_FRAMES.filter((f) => me.owned.includes(f.id))
@@ -157,9 +176,10 @@ export function ProfileScreen() {
 
   return (
     <div className="no-scrollbar absolute inset-0 overflow-y-auto" style={{ paddingTop: 'var(--top)' }}>
-      <div className="flex flex-col gap-[18px] px-5 pb-[120px] pt-3">
-        <div className="flex items-center gap-4">
-          <Avatar name={me.user.name} frame={me.avatarFrame} size={72} />
+      <div className="mx-auto flex w-full flex-col gap-[18px] px-5 pb-[120px] pt-3 desk:max-w-[984px] desk:px-8 desk:pb-10 desk:pt-6">
+        <div className="flex items-center gap-4 desk:gap-5">
+          <Avatar name={me.user.name} frame={me.avatarFrame} size={72} className="desk:hidden" />
+          <Avatar name={me.user.name} frame={me.avatarFrame} size={96} className="hidden desk:inline-grid" />
           <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
             {editing ? (
               <input
@@ -176,7 +196,7 @@ export function ProfileScreen() {
               />
             ) : (
               <button type="button" onClick={() => setEditing(true)} className="flex items-center gap-2 text-left">
-                <StyledName name={me.user.name} color={me.nameColor} className="truncate font-display text-xl font-bold tracking-[-.02em]" />
+                <StyledName name={me.user.name} color={me.nameColor} className="truncate font-display text-xl font-bold tracking-[-.02em] desk:text-[28px]" />
                 <span className="text-ink-3">
                   <Icon name="edit" size={16} />
                 </span>
@@ -255,164 +275,198 @@ export function ProfileScreen() {
           </div>
         )}
 
-        <EmailCard me={me} />
+        <div className="flex flex-col gap-[18px] desk:grid desk:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] desk:items-start desk:gap-6">
+          <div className="flex flex-col gap-[18px]">
+            <EmailCard me={me} />
 
-        {me.isAdmin && (
-          <section className="flex flex-col gap-2.5 rounded-unit border-[1.5px] border-acc/30 bg-sf p-3.5">
-            <div className="font-display text-sm font-bold text-ink-2">Админ</div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={me.infiniteHearts}
-              disabled={busy}
-              onClick={() => toggleInfiniteHearts(!me.infiniteHearts)}
-              className={['flex min-h-[48px] items-center justify-between rounded-xl border-2 px-3.5 text-left transition-colors', me.infiniteHearts ? 'border-ok bg-ok-soft' : 'border-line bg-bg', busy ? 'opacity-60' : ''].join(' ')}
-            >
-              <span className="flex items-center gap-2.5">
-                <Icon name="heart" size={19} />
-                <span className="text-sm font-bold">Бесконечные сердца</span>
-              </span>
-              <span className={['grid h-7 w-11 place-items-center rounded-full font-mono text-sm font-extrabold', me.infiniteHearts ? 'bg-ok text-white' : 'bg-sf2 text-ink-3'].join(' ')}>
-                {me.infiniteHearts ? '∞' : '○'}
-              </span>
-            </button>
-            <div className="flex min-h-[48px] items-center justify-between gap-2 rounded-xl border-2 border-line bg-bg px-3.5 py-2">
-              <span className="flex items-center gap-2.5">
-                <span className="text-acc">
-                  <Icon name="bolt" size={19} />
-                </span>
-                <span className="text-sm font-bold">Накрутка XP</span>
-              </span>
-              <div className="flex shrink-0 gap-1.5">
-                {[100, 500, 2500].map((amt) => (
-                  <button
-                    key={amt}
-                    type="button"
-                    disabled={busy}
-                    onClick={() => addAdminXp(amt)}
-                    className="rounded-lg bg-acc-soft px-2.5 py-1.5 font-mono text-xs font-extrabold text-acc-ink transition-transform active:scale-95 disabled:opacity-50"
+            {me.isAdmin && (
+              <section className="rounded-unit border-[1.5px] border-acc/30 bg-sf p-3.5">
+                <button type="button" onClick={toggleAdmin} aria-expanded={adminOpen} className="flex w-full items-center justify-between font-display text-sm font-bold text-ink-2">
+                  <span>Админ</span>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`transition-transform duration-200 ${adminOpen ? 'rotate-180' : ''}`}
                   >
-                    +{amt}
-                  </button>
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+                <AnimatePresence initial={false}>
+                  {adminOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
+                      className="overflow-hidden"
+                    >
+                      <div className="flex flex-col gap-2.5 pt-2.5">
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={me.infiniteHearts}
+                          disabled={busy}
+                          onClick={() => toggleInfiniteHearts(!me.infiniteHearts)}
+                          className={['flex min-h-[48px] items-center justify-between rounded-xl border-2 px-3.5 text-left transition-colors', me.infiniteHearts ? 'border-ok bg-ok-soft' : 'border-line bg-bg', busy ? 'opacity-60' : ''].join(' ')}
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <Icon name="heart" size={19} />
+                            <span className="text-sm font-bold">Бесконечные сердца</span>
+                          </span>
+                          <span className={['grid h-7 w-11 place-items-center rounded-full font-mono text-sm font-extrabold', me.infiniteHearts ? 'bg-ok text-white' : 'bg-sf2 text-ink-3'].join(' ')}>
+                            {me.infiniteHearts ? '∞' : '○'}
+                          </span>
+                        </button>
+                        <div className="flex min-h-[48px] items-center justify-between gap-2 rounded-xl border-2 border-line bg-bg px-3.5 py-2">
+                          <span className="flex items-center gap-2.5">
+                            <span className="text-acc">
+                              <Icon name="bolt" size={19} />
+                            </span>
+                            <span className="text-sm font-bold">Накрутка XP</span>
+                          </span>
+                          <div className="flex shrink-0 gap-1.5">
+                            {[100, 500, 2500].map((amt) => (
+                              <button
+                                key={amt}
+                                type="button"
+                                disabled={busy}
+                                onClick={() => addAdminXp(amt)}
+                                className="rounded-lg bg-acc-soft px-2.5 py-1.5 font-mono text-xs font-extrabold text-acc-ink transition-transform active:scale-95 disabled:opacity-50"
+                              >
+                                +{amt}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <Button
+                          size="md"
+                          variant={confirmReset ? 'err' : 'secondary'}
+                          disabled={busy}
+                          onClick={async () => {
+                            if (!confirmReset) {
+                              setConfirmReset(true)
+                              setTimeout(() => setConfirmReset(false), 3500)
+                              return
+                            }
+                            setConfirmReset(false)
+                            await adminReset()
+                          }}
+                        >
+                          <Icon name="refresh" size={18} />
+                          <span>{confirmReset ? 'Точно обнулить всё?' : 'Стать нищим'}</span>
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </section>
+            )}
+
+            <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
+                {(showStats ? [...mainStats, ...extraStats] : mainStats).map((p) => (
+                  <div key={p.l} className="flex items-center gap-2.5 rounded-btn border-[1.5px] border-line bg-sf px-3.5 py-3">
+                    <div style={p.c ? { color: p.c } : undefined}>
+                      {typeof p.icon === 'string' ? <Icon name={p.icon as IconName} size={22} /> : p.icon}
+                    </div>
+                    <div className="flex flex-col gap-px">
+                      <span className="font-display text-[17px] font-bold">{p.v}</span>
+                      <span className="text-xs font-semibold text-ink-2">{p.l}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowStats((v) => !v)}
+                className="flex items-center justify-center gap-1.5 rounded-xl py-1.5 text-[12px] font-bold text-ink-3 transition-colors hover:text-ink-2"
+              >
+                <span>Подробная статистика</span>
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={`transition-transform duration-200 ${showStats ? 'rotate-180' : ''}`}
+                >
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+            </div>
+
+            <Calendar me={me} />
+
+            <div className="flex flex-col gap-2.5">
+              <span className="font-display text-base font-bold">Ачивки</span>
+              <div className="grid grid-cols-4 gap-2.5">
+                {ach.map((a) => (
+                  <div key={a.t} className="flex flex-col items-center gap-1.5 text-center">
+                    <div
+                      className="grid h-[60px] w-[60px] place-items-center rounded-[20px]"
+                      style={{
+                        background: a.open ? a.c : 'var(--sf2)',
+                        color: a.open ? '#fff' : 'var(--ink3)',
+                        boxShadow: `0 4px 0 ${a.open ? a.sh : 'var(--lockSh)'}`,
+                      }}
+                    >
+                      <Icon name={a.open ? a.icon : 'lock'} size={28} />
+                    </div>
+                    <span className={`text-[11.5px] font-bold leading-[1.25] ${a.open ? 'text-ink' : 'text-ink-3'}`}>{a.t}</span>
+                  </div>
                 ))}
               </div>
             </div>
-            <Button
-              size="md"
-              variant={confirmReset ? 'err' : 'secondary'}
-              disabled={busy}
-              onClick={async () => {
-                if (!confirmReset) {
-                  setConfirmReset(true)
-                  setTimeout(() => setConfirmReset(false), 3500)
-                  return
-                }
-                setConfirmReset(false)
-                await adminReset()
-              }}
-            >
-              <Icon name="refresh" size={18} />
-              <span>{confirmReset ? 'Точно обнулить всё?' : 'Стать нищим'}</span>
-            </Button>
-          </section>
-        )}
 
-        <div className="flex flex-col gap-2">
-          <div className="grid grid-cols-2 gap-2.5">
-            {(showStats ? [...mainStats, ...extraStats] : mainStats).map((p) => (
-              <div key={p.l} className="flex items-center gap-2.5 rounded-btn border-[1.5px] border-line bg-sf px-3.5 py-3">
-                <div style={p.c ? { color: p.c } : undefined}>
-                  {typeof p.icon === 'string' ? <Icon name={p.icon as IconName} size={22} /> : p.icon}
-                </div>
-                <div className="flex flex-col gap-px">
-                  <span className="font-display text-[17px] font-bold">{p.v}</span>
-                  <span className="text-xs font-semibold text-ink-2">{p.l}</span>
-                </div>
-              </div>
-            ))}
           </div>
-          <button
-            type="button"
-            onClick={() => setShowStats((v) => !v)}
-            className="flex items-center justify-center gap-1.5 rounded-xl py-1.5 text-[12px] font-bold text-ink-3 transition-colors hover:text-ink-2"
-          >
-            <span>Подробная статистика</span>
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className={`transition-transform duration-200 ${showStats ? 'rotate-180' : ''}`}
-            >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          </button>
-        </div>
 
-        <Calendar me={me} />
-
-        <div className="flex flex-col gap-2.5">
-          <span className="font-display text-base font-bold">Ачивки</span>
-          <div className="grid grid-cols-4 gap-2.5">
-            {ach.map((a) => (
-              <div key={a.t} className="flex flex-col items-center gap-1.5 text-center">
-                <div
-                  className="grid h-[60px] w-[60px] place-items-center rounded-[20px]"
-                  style={{
-                    background: a.open ? a.c : 'var(--sf2)',
-                    color: a.open ? '#fff' : 'var(--ink3)',
-                    boxShadow: `0 4px 0 ${a.open ? a.sh : 'var(--lockSh)'}`,
-                  }}
+          <div className="flex flex-col gap-2.5">
+            <span className="font-display text-base font-bold">Портфолио</span>
+            {units.map(({ unit, index, track }) => {
+              const f = unit.project.folio
+              const p = built(unit.id)
+              const done = !!p
+              return (
+                <button
+                  key={unit.id}
+                  type="button"
+                  onClick={() => done && openProject(unit.id)}
+                  className={`flex items-center gap-3 rounded-btn border-[1.5px] bg-sf p-3 text-left ${done ? 'border-solid border-line' : 'cursor-default border-dashed border-line opacity-75'}`}
                 >
-                  <Icon name={a.open ? a.icon : 'lock'} size={28} />
-                </div>
-                <span className={`text-[11.5px] font-bold leading-[1.25] ${a.open ? 'text-ink' : 'text-ink-3'}`}>{a.t}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2.5">
-          <span className="font-display text-base font-bold">Портфолио</span>
-          {units.map(({ unit, index, track }) => {
-            const f = unit.project.folio
-            const p = built(unit.id)
-            const done = !!p
-            return (
-              <button
-                key={unit.id}
-                type="button"
-                onClick={() => done && openProject(unit.id)}
-                className={`flex items-center gap-3 rounded-btn border-[1.5px] bg-sf p-3 text-left ${done ? 'border-solid border-line' : 'cursor-default border-dashed border-line opacity-75'}`}
-              >
-                <div
-                  className={`grid h-[52px] w-[52px] shrink-0 place-items-center rounded-tile ${done ? (track === 'code' ? 'bg-code-soft text-code-ink' : 'bg-mkt-soft text-mkt-ink') : 'bg-sf2 text-ink-3'}`}
-                >
-                  <Icon name={(done ? f.icon : 'lock') as IconName} size={24} />
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
-                  <span className="text-[15px] font-bold">{f.title}</span>
-                  <span className="truncate font-mono text-[11.5px] text-ink-2">
-                    {done
-                      ? p.ready
-                        ? 'собран AI · открыть'
-                        : 'ждёт сборки · открыть'
-                      : `откроется в юните ${index + 1} · ${track === 'code' ? 'вайбкодинг' : 'маркетинг'}`}
+                  <div
+                    className={`grid h-[52px] w-[52px] shrink-0 place-items-center rounded-tile ${done ? (track === 'code' ? 'bg-code-soft text-code-ink' : 'bg-mkt-soft text-mkt-ink') : 'bg-sf2 text-ink-3'}`}
+                  >
+                    <Icon name={(done ? f.icon : 'lock') as IconName} size={24} />
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+                    <span className="text-[15px] font-bold">{f.title}</span>
+                    <span className="truncate font-mono text-[11.5px] text-ink-2">
+                      {done
+                        ? p.ready
+                          ? 'собран AI · открыть'
+                          : 'ждёт сборки · открыть'
+                        : `откроется в юните ${index + 1} · ${track === 'code' ? 'вайбкодинг' : 'маркетинг'}`}
+                    </span>
+                  </div>
+                  <span className={`rounded-lg px-2 py-1 text-[11px] font-extrabold ${done ? 'bg-ok-soft text-ok-ink' : 'bg-sf2 text-ink-3'}`}>
+                    {done ? f.tag : 'СКОРО'}
                   </span>
-                </div>
-                <span className={`rounded-lg px-2 py-1 text-[11px] font-extrabold ${done ? 'bg-ok-soft text-ok-ink' : 'bg-sf2 text-ink-3'}`}>
-                  {done ? f.tag : 'СКОРО'}
-                </span>
-              </button>
-            )
-          })}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
-        <button type="button" onClick={logout} className="self-center py-2 text-[13px] font-semibold text-ink-3 underline-offset-2 hover:underline">
+        <button type="button" onClick={logout} className="desk-hide self-center py-2 text-[13px] font-semibold text-ink-3 underline-offset-2 hover:underline">
           Выйти из аккаунта
         </button>
       </div>
