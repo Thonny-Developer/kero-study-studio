@@ -4,6 +4,8 @@ import type { Config } from 'tailwindcss'
 // Токены из макета Vibely. Значения живут в CSS-переменных (src/index.css),
 // чтобы светлая/тёмная тема и цвет трека переключались без перерендера классов.
 const v = (name: string) => `var(--${name})`
+// цвет с поддержкой прозрачности: border-acc/25, bg-acc-soft/60 и т.п.
+const c = (name: string) => `color-mix(in srgb, var(--${name}) calc(<alpha-value> * 100%), transparent)`
 
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
@@ -11,23 +13,23 @@ export default {
     extend: {
       colors: {
         // треки
-        code: { DEFAULT: v('code'), sh: v('codeSh'), soft: v('codeSoft'), ink: v('codeInk') },
-        mkt: { DEFAULT: v('mkt'), sh: v('mktSh'), soft: v('mktSoft'), ink: v('mktInk') },
+        code: { DEFAULT: c('code'), sh: c('codeSh'), soft: c('codeSoft'), ink: c('codeInk') },
+        mkt: { DEFAULT: c('mkt'), sh: c('mktSh'), soft: c('mktSoft'), ink: c('mktInk') },
         // активный трек
-        acc: { DEFAULT: v('acc'), sh: v('accSh'), soft: v('accSoft'), ink: v('accInk') },
+        acc: { DEFAULT: c('acc'), sh: c('accSh'), soft: c('accSoft'), ink: c('accInk') },
         // статусы
-        ok: { DEFAULT: v('ok'), sh: v('okSh'), soft: v('okSoft'), ink: v('okInk') },
-        err: { DEFAULT: v('err'), sh: v('errSh'), soft: v('errSoft'), ink: v('errInk') },
-        gold: { DEFAULT: v('gold'), sh: v('goldSh'), soft: v('goldSoft'), ink: v('goldInk') },
+        ok: { DEFAULT: c('ok'), sh: c('okSh'), soft: c('okSoft'), ink: c('okInk') },
+        err: { DEFAULT: c('err'), sh: c('errSh'), soft: c('errSoft'), ink: c('errInk') },
+        gold: { DEFAULT: c('gold'), sh: c('goldSh'), soft: c('goldSoft'), ink: c('goldInk') },
         // нейтрали
-        page: v('page'),
-        bg: v('bg'),
-        sf: v('sf'),
-        sf2: v('sf2'),
-        ink: { DEFAULT: v('ink'), 2: v('ink2'), 3: v('ink3') },
-        line: v('line'),
-        lock: v('lockSh'),
-        term: { DEFAULT: v('term'), line: v('termLine'), text: '#E9E6F2', mute: '#8E89A0', green: '#8CFFC1' },
+        page: c('page'),
+        bg: c('bg'),
+        sf: c('sf'),
+        sf2: c('sf2'),
+        ink: { DEFAULT: c('ink'), 2: c('ink2'), 3: c('ink3') },
+        line: c('line'),
+        lock: c('lockSh'),
+        term: { DEFAULT: c('term'), line: c('termLine'), text: '#E9E6F2', mute: '#8E89A0', green: '#8CFFC1' },
       },
       fontFamily: {
         display: ['Unbounded', 'sans-serif'],
