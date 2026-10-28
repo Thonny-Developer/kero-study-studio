@@ -8,6 +8,7 @@ import { RightRail } from './components/ui/RightRail'
 import { SidePanel } from './components/ui/SidePanel'
 import { TabBar, TAB_SCREENS } from './components/ui/TabBar'
 import { Toast } from './components/ui/Toast'
+import { AdminStatsScreen } from './screens/AdminStatsScreen'
 import { EndScreen } from './screens/EndScreen'
 import { ForgotScreen } from './screens/ForgotScreen'
 import { LeagueScreen } from './screens/LeagueScreen'
@@ -40,6 +41,7 @@ const SCREENS: Record<Screen, () => ReactNode> = {
   pet: PetScreen,
   shop: ShopScreen,
   profile: ProfileScreen,
+  adminStats: AdminStatsScreen,
 }
 
 const GUEST: Screen[] = ['welcome', 'onboarding', 'login', 'forgot']
@@ -52,6 +54,7 @@ function safeScreen(s: GameState): Screen | 'splash' {
   if ((s.screen === 'lesson' || s.screen === 'noHearts') && !s.me.lesson) return 'map'
   if (s.screen === 'end' && !s.result) return 'map'
   if (s.screen === 'project' && !s.projectUnit) return 'map'
+  if (s.screen === 'adminStats' && !s.me.isAdmin) return 'profile'
   return s.screen
 }
 
@@ -112,7 +115,7 @@ export function App() {
   const tabbed = screen !== 'splash' && TAB_SCREENS.includes(screen)
 
   return (
-    <AppShell tabbed={tabbed} wide={screen === 'map' || screen === 'shop' || screen === 'profile' || screen === 'pet'} nav={<SidePanel />} rail={<RightRail />} tabBar={<TabBar />}>
+    <AppShell tabbed={tabbed} wide={screen === 'map' || screen === 'shop' || screen === 'profile' || screen === 'pet' || screen === 'adminStats'} nav={<SidePanel />} rail={<RightRail />} tabBar={<TabBar />}>
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.div
           key={tabbed ? `tab-${screen}` : screen}

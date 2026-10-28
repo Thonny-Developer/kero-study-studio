@@ -30,7 +30,7 @@ interface DecorMeta {
   sub: string
 }
 
-const CONSUMABLES: ConsumableMeta[] = [
+export const CONSUMABLES: ConsumableMeta[] = [
   // Еда
   { id: 'food_cookie', kind: 'food', title: 'Печенька', stat: '+22 сытость', xp: 10, tint: '#FFE9CC', phrase: 'Хрум! Вкусно' },
   { id: 'food_ramen', kind: 'food', title: 'Рамен', stat: '+45 сытость', xp: 25, tint: '#FFE0DE', phrase: 'Горячий рамен!' },
@@ -48,7 +48,7 @@ const CONSUMABLES: ConsumableMeta[] = [
   { id: 'drink_energy', kind: 'drink', title: 'Энергетик', stat: '+100 жажда', xp: 95, tint: '#DDFBEA', phrase: 'Турбо-режим!' },
 ]
 
-const DECORS: DecorMeta[] = [
+export const DECORS: DecorMeta[] = [
   { id: 'decor_rug', title: 'Коврик', sub: 'Пол' },
   { id: 'decor_plant', title: 'Фикус', sub: 'Левый угол' },
   { id: 'decor_lamp', title: 'Лава-лампа', sub: 'Правый угол' },

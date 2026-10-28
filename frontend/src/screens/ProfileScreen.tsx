@@ -207,7 +207,7 @@ export function ProfileScreen() {
   const course = useGame((s) => s.course)
   const theme = useGame((s) => s.theme)
   const busy = useGame((s) => s.busy)
-  const { setTheme, rename, openProject, logout, toggleInfiniteHearts, addAdminXp, addAdminCoins, adminReset, setAvatarFrame, setNameColor } = useGame.getState()
+  const { go, setTheme, rename, openProject, logout, toggleInfiniteHearts, addAdminXp, addAdminCoins, adminReset, setAvatarFrame, setNameColor } = useGame.getState()
   const [editing, setEditing] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
@@ -381,6 +381,19 @@ export function ProfileScreen() {
                       className="overflow-hidden"
                     >
                       <div className="flex flex-col gap-2.5 pt-2.5">
+                        <button
+                          type="button"
+                          onClick={() => go('adminStats')}
+                          className="flex min-h-[48px] items-center justify-between rounded-xl border-2 border-line bg-bg px-3.5 text-left transition-colors hover:border-acc/40"
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <Icon name="league" size={19} />
+                            <span className="text-sm font-bold">Статистика</span>
+                          </span>
+                          <span className="rotate-180 text-ink-3">
+                            <Icon name="back" size={18} />
+                          </span>
+                        </button>
                         <button
                           type="button"
                           role="switch"

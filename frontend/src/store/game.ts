@@ -10,7 +10,7 @@ import { toast } from './toast'
 export const SB_PASS = 60
 export const XP_PROJECT = 50
 
-export type Screen = 'welcome' | 'onboarding' | 'login' | 'forgot' | 'verify' | 'map' | 'lesson' | 'end' | 'noHearts' | 'project' | 'league' | 'pet' | 'shop' | 'profile'
+export type Screen = 'welcome' | 'onboarding' | 'login' | 'forgot' | 'verify' | 'map' | 'lesson' | 'end' | 'noHearts' | 'project' | 'league' | 'pet' | 'shop' | 'profile' | 'adminStats'
 export type Theme = 'light' | 'dark'
 
 export interface Draft {

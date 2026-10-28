@@ -30,13 +30,7 @@ Vite проксирует `/api` и `/p` на `http://localhost:8787`. Если 
 
 ## Деплой на Vercel
 
-Сначала задеплой бэкенд (см. [backend/README.md](../backend/README.md#деплой)) и возьми его адрес.
-
-1. В Vercel: **Add New → Project**, импортируй репозиторий.
-2. **Root Directory** = `frontend`. Framework Preset определится как **Vite**.
-3. Environment Variables: `VITE_API_URL=https://<адрес-бэкенда>`.
-4. Deploy.
-5. Адрес фронта пропиши в `CORS_ORIGIN` у бэкенда и передеплой бэкенд.
+Фронт и API деплоятся одним проектом из корня репозитория (см. [README.md](../README.md#деплой-на-vercel)). `VITE_API_URL` не нужен: API на том же домене.
 
 ## PWA
 

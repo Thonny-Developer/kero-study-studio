@@ -248,3 +248,62 @@ export interface Shop {
   market: ShopMarket
   items: Record<ShopItemId, number>
 }
+
+export type StatRange = 7 | 30 | 90
+
+type LessonStatRow = { id: string; title: string; unit: string; runs: number; accuracy: number }
+
+/** GET /api/admin/stats */
+export interface AdminStats {
+  range: StatRange
+  today: string
+  users: { total: number; verified: number; newInRange: number }
+  visits: {
+    series: { day: string; users: number; hits: number; newUsers: number }[]
+    today: number
+    dauAvg: number
+    wau: number
+    mau: number
+    unique: number
+    hits: number
+  }
+  lessons: {
+    series: { day: string; runs: number; users: number }[]
+    runs: number
+    learners: number
+    allTime: number
+    allTimeLearners: number
+    accuracy: number
+    flawless: number
+    projects: number
+    medianTimeMs: number
+    perLearner: number
+    top: LessonStatRow[]
+    hardest: LessonStatRow[]
+  }
+  shop: {
+    series: { day: string; purchases: number; coins: number }[]
+    purchases: number
+    coinsSpent: number
+    buyers: number
+    exchange: { count: number; coins: number; xp: number }
+    sell: { count: number; coins: number; xp: number }
+    top: { item: string; count: number; coins: number }[]
+  }
+  xp: {
+    series: { day: string; xp: number; users: number; median: number }[]
+    inRange: number
+    medianInRange: number
+    total: number
+    admin: number
+    mean: number
+    median: number
+    medianAll: number
+    p90: number
+    max: number
+    withXp: number
+    byReason: { reason: string; xp: number }[]
+    buckets: { label: string; users: number }[]
+    top: { name: string; xp: number }[]
+  }
+}

@@ -112,6 +112,16 @@ const SCHEMA = [
   )`,
   `CREATE INDEX IF NOT EXISTS coin_events_user ON coin_events(user_id)`,
   `CREATE INDEX IF NOT EXISTS coin_events_time ON coin_events(created_at)`,
+  // Заходы в приложение: одна строка на юзера в день (день — в его таймзоне), hits — число сессий
+  `CREATE TABLE IF NOT EXISTS visits (
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    day TEXT NOT NULL,
+    hits INTEGER NOT NULL DEFAULT 1,
+    first_at INTEGER NOT NULL,
+    last_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, day)
+  )`,
+  `CREATE INDEX IF NOT EXISTS visits_day ON visits(day)`,
 ]
 
 // Колонки, добавленные после первого релиза: ALTER для уже существующих баз

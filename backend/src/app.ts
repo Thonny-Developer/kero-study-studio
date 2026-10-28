@@ -14,6 +14,7 @@ import { buy, exchange, isFrameId, isNameColorId, isSkinId, ownedItems, sell, sh
 import { buyPetDecor, feedPet, playWithPet, togglePetDecor } from './pet.js'
 import { dayKey, weekKey } from './time.js'
 import { courseView } from './views.js'
+import { adminStats, STAT_RANGES, trackVisit, type StatRange } from './admin.js'
 
 export const app = express()
 app.set('trust proxy', true)
@@ -142,6 +143,8 @@ app.get('/api/course', (_req, res) => {
 })
 
 app.get('/api/me', requireUser, async (req, res) => {
+  // GET /api/me зовётся при каждом открытии приложения — это и считаем заходом
+  await trackVisit(user(req).id, user(req).tz)
   res.json(await getState(user(req)))
 })
 
@@ -236,6 +239,12 @@ app.post('/api/admin/coins', requireUser, requireAdmin, async (req, res) => {
   )
   u.coins += b.amount
   res.json(await getState(u))
+})
+
+app.get('/api/admin/stats', requireUser, requireAdmin, async (req, res) => {
+  const range = Number(req.query.range ?? 30)
+  if (!STAT_RANGES.includes(range as StatRange)) throw bad('Неверный период')
+  res.json(await adminStats(user(req).tz, range as StatRange))
 })
 
 app.post('/api/admin/reset', requireUser, requireAdmin, async (req, res) => {

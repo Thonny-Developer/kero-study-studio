@@ -105,15 +105,7 @@ SMTP-хост резолвится в IPv4. На сетях без IPv6 nodemail
 
 ### Vercel + Turso
 
-1. Создай базу в [Turso](https://turso.tech):
-   ```bash
-   turso db create vibely
-   turso db show vibely --url
-   turso db tokens create vibely
-   ```
-2. В Vercel: **Add New → Project**, тот же репозиторий, **Root Directory** = `backend`, Framework Preset — **Other**.
-3. Добавь Environment Variables: `MISTRAL_API_KEY`, `MISTRAL_MODEL`, `MISTRAL_CODE_MODEL`, `DATABASE_URL` (libsql://…), `DATABASE_AUTH_TOKEN`, `CORS_ORIGIN` и `APP_URL` (адрес фронта), `SMTP_*` и `MAIL_FROM`.
-4. Нажми Deploy. `api/index.ts` экспортирует Express-приложение, а `vercel.json` направляет все пути в эту функцию (лимит 60 с — хватает на сборку лендинга).
+Бэкенд и фронт деплоятся одним проектом из корня репозитория, инструкция в [README.md](../README.md#деплой-на-vercel). Функция — `../api/index.ts`, она экспортирует Express-приложение из `src/app.ts`.
 
 На Vercel файловую SQLite использовать нельзя: при `file:` URL сервер сразу сообщит об этом при старте.
 

@@ -36,7 +36,7 @@ interface Item {
   tag: string
 }
 
-const ITEMS: Item[] = [
+export const ITEMS: Item[] = [
   {
     id: 'heart',
     name: 'Запасное сердце',
