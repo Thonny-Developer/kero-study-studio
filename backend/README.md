@@ -29,8 +29,8 @@ npm run dev            # http://localhost:8787, перезапуск при из
 | `MISTRAL_API_KEY` | ключ Mistral, обязателен для песочницы и проектов. Без него эти эндпоинты отвечают 503, остальное работает |
 | `MISTRAL_MODEL` | оценка промптов и текстовые проекты. По умолчанию `ministral-14b-latest` |
 | `MISTRAL_CODE_MODEL` | HTML и код в проектах. По умолчанию `codestral-latest` |
-| `DATABASE_URL` | `file:./data/vibely.db` локально или `libsql://….turso.io` в проде |
-| `DATABASE_AUTH_TOKEN` | токен Turso |
+| `DATABASE_URL` | `file:./data/vibely.db` локально или `postgresql://…` (Supabase) в проде |
+| `DATABASE_AUTH_TOKEN` | токен Turso, только для `libsql://` |
 | `CORS_ORIGIN` | адрес фронта, например `https://vibely.vercel.app`. Если пусто — запросы разрешены с любого origin |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_TLS` | SMTP-сервер для писем. Для Gmail: `smtp.gmail.com`, `587`, `true` (STARTTLS) |
 | `SMTP_USER`, `SMTP_PASSWORD` | логин и пароль SMTP. Для Gmail нужен [пароль приложения](https://myaccount.google.com/apppasswords), обычный пароль не подойдёт |
@@ -50,7 +50,7 @@ npm run dev            # http://localhost:8787, перезапуск при из
 
 ## Данные
 
-Хранятся в SQLite через libSQL. Локально это файл `data/vibely.db`, в проде база в Turso, код один и тот же. Таблицы создаются при старте.
+Локально — SQLite-файл `data/vibely.db` (libSQL), в проде — Postgres (Supabase). Тип БД выбирается по `DATABASE_URL`, запросы общие, адаптер в `src/db.ts`. Таблицы создаются при старте.
 
 - `users`: профиль, сердечки, стрик, таймзона;
 - `sessions`: хэши токенов (сам токен в БД не хранится);
@@ -103,7 +103,7 @@ SMTP-хост резолвится в IPv4. На сетях без IPv6 nodemail
 
 ## Деплой
 
-### Vercel + Turso
+### Vercel + Supabase
 
 Бэкенд и фронт деплоятся одним проектом из корня репозитория, инструкция в [README.md](../README.md#деплой-на-vercel). Функция — `../api/index.ts`, она экспортирует Express-приложение из `src/app.ts`.
 
@@ -111,4 +111,4 @@ SMTP-хост резолвится в IPv4. На сетях без IPv6 nodemail
 
 ### Render, Railway или VPS
 
-Build command: `npm install`. Start command: `npm start`. Можно оставить SQLite в файле, если подключить постоянный диск и указать `DATABASE_URL=file:/data/vibely.db`. Либо подключить ту же Turso.
+Build command: `npm install`. Start command: `npm start`. Можно оставить SQLite в файле, если подключить постоянный диск и указать `DATABASE_URL=file:/data/vibely.db`. Либо подключить тот же Postgres.

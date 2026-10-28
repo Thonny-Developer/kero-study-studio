@@ -1,10 +1,9 @@
 import crypto from 'node:crypto'
-import type { InStatement } from '@libsql/client'
 import type { UserRow } from './auth.js'
 import { COURSE, findNode, TRACKS, trackNodes } from './content/lessons.js'
 import { LEARNING } from './content/learning.js'
 import type { LessonNode, Task, Track } from './content/types.js'
-import { all, db, one, run } from './db.js'
+import { all, db, one, run, type Stmt } from './db.js'
 import { env } from './env.js'
 import { bad, HttpError } from './http.js'
 import { buildArtifact, gradePrompt } from './mistral.js'
@@ -14,6 +13,10 @@ import { getPetState } from './pet.js'
 import { publicTask, type PublicTask } from './views.js'
 
 export const MAX_HEARTS = 5
+// Начать урок заново: прогресс прошлой попытки (если была) обнуляется
+const START_LESSON = `INSERT INTO active_lessons (user_id, node_id, started_at) VALUES (?, ?, ?)
+  ON CONFLICT (user_id) DO UPDATE SET node_id = excluded.node_id, started_at = excluded.started_at,
+    idx = 0, got = 0, mist = 0, xp = 0, checked = 0, feedback = NULL, answer = NULL, sb_prompt = NULL, queue = NULL`
 /** Одно сердечко восстанавливается за 10 минут */
 export const HEART_MS = 10 * 60 * 1000
 export const XP_PER_TASK = 10
@@ -299,7 +302,7 @@ export async function openNode(u: UserRow, nodeId: string): Promise<OpenResult> 
   }
   await db().batch(
     [
-      { sql: 'INSERT OR REPLACE INTO active_lessons (user_id, node_id, started_at) VALUES (?, ?, ?)', args: [u.id, nodeId, Date.now()] },
+      { sql: START_LESSON, args: [u.id, nodeId, Date.now()] },
       { sql: 'UPDATE users SET track = ? WHERE id = ?', args: [f.track, u.id] },
     ],
     'write',
@@ -344,7 +347,7 @@ export async function skipUnit(u: UserRow, unitId: string): Promise<{ cost: numb
 
   const now = Date.now()
   const today = dayKey(u.tz)
-  const stmts: InStatement[] = [
+  const stmts: Stmt[] = [
     {
       sql: 'UPDATE users SET coins = coins - ? WHERE id = ? AND coins >= ?',
       args: [cost, u.id, cost],
@@ -369,7 +372,7 @@ export async function skipUnit(u: UserRow, unitId: string): Promise<{ cost: numb
       const sbTask = node.tasks.find((t) => t.type === 'sb')
       const defaultPrompt = sbTask && 'example' in sbTask ? sbTask.example : `${unit.title}: ${unit.sub}`
       stmts.push({
-        sql: 'INSERT OR IGNORE INTO projects (id, user_id, unit_id, kind, prompt, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        sql: 'INSERT INTO projects (id, user_id, unit_id, kind, prompt, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING',
         args: [crypto.randomBytes(9).toString('base64url'), u.id, unit.id, unit.project.artifact, defaultPrompt, now, now],
       })
     }
@@ -511,17 +514,17 @@ export async function next(u: UserRow): Promise<{ result?: LessonResult; noHeart
   let streak = u.streak
   if (u.last_day !== today) streak = u.last_day === shiftDay(today, -1) ? u.streak + 1 : 1
 
-  const xpRow = (amount: number, reason: string): InStatement => ({
+  const xpRow = (amount: number, reason: string): Stmt => ({
     sql: 'INSERT INTO xp_events (user_id, amount, reason, node_id, day, week, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
     args: [u.id, amount, reason, a.node_id, today, week, now],
   })
-  const stmts: InStatement[] = [
+  const stmts: Stmt[] = [
     {
       sql: 'INSERT INTO runs (user_id, node_id, unit_id, kind, got, mist, xp, time_ms, day, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       args: [u.id, a.node_id, f.unit.id, lesson.kind, a.got, a.mist, earned, now - a.started_at, today, now],
     },
     xpRow(base, 'lesson'),
-    { sql: 'UPDATE users SET streak = ?, max_streak = MAX(max_streak, ?), last_day = ? WHERE id = ?', args: [streak, streak, today, u.id] },
+    { sql: 'UPDATE users SET streak = ?, max_streak = CASE WHEN max_streak > ? THEN max_streak ELSE ? END, last_day = ? WHERE id = ?', args: [streak, streak, streak, today, u.id] },
     { sql: 'DELETE FROM active_lessons WHERE user_id = ?', args: [u.id] },
   ]
   if (flawlessBonus) stmts.push(xpRow(flawlessBonus, 'flawless'))
@@ -566,7 +569,7 @@ export async function retry(u: UserRow) {
   if (!a) throw new HttpError(409, 'Нет активного урока', 'no-lesson')
   await syncHearts(u)
   if (u.hearts <= 0) throw new HttpError(409, 'Сердечки закончились — подожди восстановления по таймеру', 'no-hearts')
-  await run('INSERT OR REPLACE INTO active_lessons (user_id, node_id, started_at) VALUES (?, ?, ?)', [u.id, a.node_id, Date.now()])
+  await run(START_LESSON, [u.id, a.node_id, Date.now()])
 }
 
 /* ---------- Лига ---------- */

@@ -18,7 +18,7 @@ export async function trackVisit(userId: string, tz: string) {
   await run(
     `INSERT INTO visits (user_id, day, hits, first_at, last_at) VALUES (?, ?, 1, ?, ?)
      ON CONFLICT (user_id, day) DO UPDATE SET
-       hits = hits + (excluded.last_at - last_at > ?),
+       hits = visits.hits + CASE WHEN excluded.last_at - visits.last_at > ? THEN 1 ELSE 0 END,
        last_at = excluded.last_at`,
     [userId, dayKey(tz), now, now, SESSION_GAP],
   )

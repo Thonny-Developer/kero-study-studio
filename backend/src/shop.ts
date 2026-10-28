@@ -400,8 +400,8 @@ export async function buy(u: UserRow, id: unknown) {
     guard = ` AND hearts < ${MAX_HEARTS}`
   } else if (item === 'double') {
     // Повторная покупка продлевает активный бонус
-    set += ', double_xp_until = MAX(COALESCE(double_xp_until, 0), ?) + ?'
-    args.push(now, DOUBLE_XP_MS)
+    set += ', double_xp_until = CASE WHEN COALESCE(double_xp_until, 0) > ? THEN double_xp_until ELSE ? END + ?'
+    args.push(now, now, DOUBLE_XP_MS)
   } else {
     if (await one("SELECT 1 FROM coin_events WHERE user_id = ? AND kind = 'buy' AND item = ?", [u.id, item])) {
       throw bad('Уже куплено', 'owned')
