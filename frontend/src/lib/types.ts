@@ -290,6 +290,23 @@ export interface AdminStats {
     sell: { count: number; coins: number; xp: number }
     top: { item: string; count: number; coins: number }[]
   }
+  ctr: {
+    funnel: { id: string; label: string; from: number; to: number; ctr: number | null }[]
+    lessonSeries: { day: string; opens: number; runs: number }[]
+    shopViews: number
+    lessonOpens: number
+    reviewOpens: number
+  }
+  reviews: {
+    total: number
+    avg: number
+    inRange: number
+    avgInRange: number
+    withText: number
+    share: number
+    dist: { stars: number; count: number }[]
+    latest: Review[]
+  }
   xp: {
     series: { day: string; xp: number; users: number; median: number }[]
     inRange: number
@@ -306,4 +323,16 @@ export interface AdminStats {
     buckets: { label: string; users: number }[]
     top: { name: string; xp: number }[]
   }
+}
+
+export interface Review {
+  name: string
+  rating: number
+  text: string
+  at: number
+}
+
+/** GET/POST /api/review */
+export interface MyReview {
+  review: { rating: number; text: string; at: number } | null
 }

@@ -6,6 +6,7 @@ import { formatDuration, MONTHS_GEN } from '../lib/date'
 import { Icon, type IconName } from '../lib/icons'
 import type { AdminStats, StatRange } from '../lib/types'
 import { useGame } from '../store/game'
+import { Stars } from '../components/ui/Stars'
 import { CONSUMABLES, DECORS } from './PetScreen'
 import { ITEMS } from './ShopScreen'
 
@@ -177,6 +178,96 @@ export function AdminStatsScreen() {
                   return `${d.users} чел · ${d.hits} сессий · +${d.newUsers} новых`
                 }}
               />
+            </Section>
+
+            <Section title="CTR" icon="target" c="var(--code)">
+              <div className="flex flex-col gap-2">
+                {s.ctr.funnel.map((f) => (
+                  <div key={f.id} className="flex flex-col gap-1.5 rounded-xl bg-bg px-3 py-2.5">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="truncate text-[13.5px] font-bold">{f.label}</span>
+                      <span className="shrink-0 font-display text-[17px] font-bold">{f.ctr === null ? '—' : pct(f.ctr)}</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-sf2">
+                      <motion.div
+                        className="h-full rounded-full bg-code"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(f.ctr ?? 0) * 100}%` }}
+                        transition={{ duration: 0.4, ease: 'easeOut' }}
+                      />
+                    </div>
+                    <span className="font-mono text-[11px] font-bold text-ink-3">
+                      {num(f.to)} из {num(f.from)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <span className="font-mono text-[11px] font-bold tracking-[.06em] text-ink-3">ДОХОДИМОСТЬ УРОКОВ ПО ДНЯМ</span>
+              <Bars
+                days={days}
+                values={s.ctr.lessonSeries.map((d) => (d.opens ? Math.min(1, d.runs / d.opens) : 0))}
+                color="var(--code)"
+                describe={(i) => {
+                  const d = s.ctr.lessonSeries[i]
+                  return d.opens ? `${pct(Math.min(1, d.runs / d.opens))} · ${d.runs} из ${d.opens} открытий` : 'нет открытий'
+                }}
+              />
+              <div className="text-[12px] font-semibold text-ink-3">
+                За {range} д: {num(s.ctr.lessonOpens)} открытий уроков, {num(s.ctr.shopViews)} просмотров магазина, {num(s.ctr.reviewOpens)} открытий формы отзыва. Считается с момента включения трекинга.
+              </div>
+            </Section>
+
+            <Section title="Отзывы" icon="star" c="var(--gold)">
+              <div className={tiles}>
+                <Tile v={s.reviews.total ? s.reviews.avg.toLocaleString('ru-RU') : '—'} l="средняя оценка" icon="star" c="var(--gold)" />
+                <Tile v={num(s.reviews.total)} l="отзывов всего" />
+                <Tile v={`${num(s.reviews.inRange)}`} l={`за ${range} д`} />
+                <Tile v={s.reviews.inRange ? s.reviews.avgInRange.toLocaleString('ru-RU') : '—'} l={`оценка за ${range} д`} />
+                <Tile v={num(s.reviews.withText)} l="с текстом" />
+                <Tile v={pct(s.reviews.share)} l="юзеров оставили" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="font-mono text-[11px] font-bold tracking-[.06em] text-ink-3">РАСПРЕДЕЛЕНИЕ</span>
+                {s.reviews.dist.map((d) => (
+                  <div key={d.stars} className="flex items-center gap-2.5 text-[12.5px] font-bold">
+                    <span className="flex w-[30px] shrink-0 items-center gap-1 font-mono text-ink-2">
+                      {d.stars}
+                      <span className="text-gold">
+                        <Icon name="star" size={12} />
+                      </span>
+                    </span>
+                    <div className="h-3 flex-1 overflow-hidden rounded-full bg-bg">
+                      <motion.div
+                        className="h-full rounded-full bg-gold"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${s.reviews.total ? (d.count / s.reviews.total) * 100 : 0}%` }}
+                        transition={{ duration: 0.4, ease: 'easeOut' }}
+                      />
+                    </div>
+                    <span className="w-8 shrink-0 text-right font-mono text-ink-2">{d.count}</span>
+                  </div>
+                ))}
+              </div>
+              {s.reviews.latest.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <span className="font-mono text-[11px] font-bold tracking-[.06em] text-ink-3">ПОСЛЕДНИЕ</span>
+                  {s.reviews.latest.map((r, i) => {
+                    const d = new Date(r.at)
+                    return (
+                      <div key={i} className="flex flex-col gap-1 rounded-xl bg-bg px-3 py-2.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="truncate text-[13.5px] font-bold">{r.name}</span>
+                          <Stars value={r.rating} size={14} />
+                        </div>
+                        {r.text && <p className="whitespace-pre-wrap break-words text-[13px] font-medium text-ink-2">{r.text}</p>}
+                        <span className="font-mono text-[11px] font-bold text-ink-3">
+                          {d.getDate()} {MONTHS_GEN[d.getMonth()]}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </Section>
 
             <Section title="Уроки" icon="target" c="var(--ok)">

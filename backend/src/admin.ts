@@ -24,6 +24,13 @@ export async function trackVisit(userId: string, tz: string) {
   )
 }
 
+export const EVENT_KINDS = ['lesson_open', 'shop_view', 'review_open'] as const
+export type EventKind = (typeof EVENT_KINDS)[number]
+
+export async function trackEvent(userId: string, kind: EventKind) {
+  await run('INSERT INTO events (user_id, kind, created_at) VALUES (?, ?, ?)', [userId, kind, Date.now()])
+}
+
 function median(xs: number[]) {
   if (!xs.length) return 0
   const s = [...xs].sort((a, b) => a - b)
@@ -57,7 +64,7 @@ export async function adminStats(tz: string, range: StatRange) {
   const inRange = (d: string) => d >= first && d <= today
   const series = <T>(make: () => T) => new Map(days.map((d) => [d, make()]))
 
-  const [users, visits, wauRow, mauRow, runs, runsTotal, coins, xpEvents, xpByUser, xpTotals] = await Promise.all([
+  const [users, visits, wauRow, mauRow, runs, runsTotal, coins, xpEvents, xpByUser, xpTotals, events, reviews] = await Promise.all([
     all<{ id: string; name: string; created_at: number; email_verified: number }>('SELECT id, name, created_at, email_verified FROM users'),
     all<{ user_id: string; day: string; hits: number }>('SELECT user_id, day, hits FROM visits WHERE day >= ?', [shiftDay(first, -1)]),
     one<{ n: number }>('SELECT COUNT(DISTINCT user_id) AS n FROM visits WHERE day >= ?', [shiftDay(today, -6)]),
@@ -75,6 +82,10 @@ export async function adminStats(tz: string, range: StatRange) {
     all<{ user_id: string; amount: number; reason: string; created_at: number }>('SELECT user_id, amount, reason, created_at FROM xp_events WHERE created_at >= ?', [since]),
     all<{ user_id: string; xp: number }>("SELECT user_id, SUM(amount) AS xp FROM xp_events WHERE reason != 'admin' GROUP BY user_id"),
     all<{ reason: string; xp: number }>('SELECT reason, SUM(amount) AS xp FROM xp_events GROUP BY reason'),
+    all<{ user_id: string; kind: string; created_at: number }>('SELECT user_id, kind, created_at FROM events WHERE created_at >= ?', [since]),
+    all<{ user_id: string; rating: number; text: string; created_at: number; updated_at: number }>(
+      'SELECT user_id, rating, text, created_at, updated_at FROM reviews ORDER BY updated_at DESC',
+    ),
   ])
   const names = new Map(users.map((u) => [u.id, u.name]))
 
@@ -184,6 +195,35 @@ export async function adminStats(tz: string, range: StatRange) {
   const rangePerUser = new Map<string, number>()
   for (const m of xs.values()) for (const [id, x] of m) rangePerUser.set(id, (rangePerUser.get(id) ?? 0) + x)
 
+  /* ---------- CTR ---------- */
+  // показ -> действие: доля и по людям, и по количеству
+  const ev = { lesson_open: [] as string[], shop_view: [] as string[], review_open: [] as string[] }
+  const cs = series(() => ({ opens: 0, runs: 0 }))
+  for (const e of events) {
+    const day = toDay(e.created_at)
+    if (!inRange(day) || !(e.kind in ev)) continue
+    ev[e.kind as EventKind].push(e.user_id)
+    if (e.kind === 'lesson_open') cs.get(day)!.opens++
+  }
+  for (const [day, s] of ls) cs.get(day)!.runs = s.runs
+  const uniq = (xs: string[]) => new Set(xs)
+  const rate = (a: number, b: number) => (b ? Math.min(1, a / b) : null)
+  const openers = uniq(ev.lesson_open)
+  const shoppers = uniq(ev.shop_view)
+  const reviewOpeners = uniq(ev.review_open)
+  const reviewsInRange = reviews.filter((r) => inRange(toDay(r.updated_at)))
+  const newUsers = users.filter((u) => inRange(toDay(u.created_at)))
+  const funnel = [
+    { id: 'visit_lesson', label: 'Заход → открыл урок', from: visitors.size, to: [...openers].filter((id) => visitors.has(id)).length },
+    { id: 'open_finish', label: 'Открыл урок → прошёл', from: ev.lesson_open.length, to: lessonRuns },
+    { id: 'shop_buy', label: 'Магазин → покупка', from: shoppers.size, to: [...buyers].filter((id) => shoppers.has(id)).length },
+    { id: 'review_send', label: 'Форма отзыва → отправил', from: reviewOpeners.size, to: reviewsInRange.filter((r) => reviewOpeners.has(r.user_id)).length },
+    { id: 'signup_verify', label: 'Регистрация → почта', from: newUsers.length, to: newUsers.filter((u) => u.email_verified).length },
+  ].map((f) => ({ ...f, ctr: rate(f.to, f.from) }))
+
+  /* ---------- Отзывы ---------- */
+  const ratingAvg = (rs: { rating: number }[]) => (rs.length ? Math.round((rs.reduce((a, r) => a + r.rating, 0) / rs.length) * 100) / 100 : 0)
+
   return {
     range,
     today,
@@ -223,6 +263,23 @@ export async function adminStats(tz: string, range: StatRange) {
       exchange,
       sell,
       top: [...perItem].map(([item, v]) => ({ item, ...v })).sort((a, b) => b.coins - a.coins).slice(0, 10),
+    },
+    ctr: {
+      funnel,
+      lessonSeries: days.map((day) => ({ day, ...cs.get(day)! })),
+      shopViews: ev.shop_view.length,
+      lessonOpens: ev.lesson_open.length,
+      reviewOpens: ev.review_open.length,
+    },
+    reviews: {
+      total: reviews.length,
+      avg: ratingAvg(reviews),
+      inRange: reviewsInRange.length,
+      avgInRange: ratingAvg(reviewsInRange),
+      withText: reviews.filter((r) => r.text.trim()).length,
+      share: users.length ? reviews.length / users.length : 0,
+      dist: [5, 4, 3, 2, 1].map((stars) => ({ stars, count: reviews.filter((r) => r.rating === stars).length })),
+      latest: reviews.slice(0, 20).map((r) => ({ name: names.get(r.user_id) ?? '—', rating: r.rating, text: r.text, at: r.updated_at })),
     },
     xp: {
       series: xpSeries,

@@ -14,7 +14,7 @@ import { buy, exchange, isFrameId, isNameColorId, isSkinId, ownedItems, sell, sh
 import { buyPetDecor, feedPet, playWithPet, togglePetDecor } from './pet.js'
 import { dayKey, weekKey } from './time.js'
 import { courseView } from './views.js'
-import { adminStats, STAT_RANGES, trackVisit, type StatRange } from './admin.js'
+import { adminStats, EVENT_KINDS, STAT_RANGES, trackEvent, trackVisit, type StatRange } from './admin.js'
 
 export const app = express()
 app.set('trust proxy', true)
@@ -209,6 +209,37 @@ app.patch('/api/me', requireUser, async (req, res) => {
   res.json(await getState(u))
 })
 
+/* ---------- Отзывы ---------- */
+
+app.get('/api/review', requireUser, async (req, res) => {
+  const r = await one<{ rating: number; text: string; updated_at: number }>('SELECT rating, text, updated_at FROM reviews WHERE user_id = ?', [user(req).id])
+  res.json({ review: r ? { rating: Number(r.rating), text: r.text, at: Number(r.updated_at) } : null })
+})
+
+app.post('/api/review', requireUser, async (req, res) => {
+  const b = parse(
+    z.object({
+      rating: z.number().int().min(1, 'Поставь оценку от 1 до 5').max(5, 'Поставь оценку от 1 до 5'),
+      text: z.string().trim().max(1000, 'Отзыв — до 1000 символов').default(''),
+    }),
+    req.body ?? {},
+  )
+  const now = Date.now()
+  await run(
+    `INSERT INTO reviews (user_id, rating, text, created_at, updated_at) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT (user_id) DO UPDATE SET rating = excluded.rating, text = excluded.text, updated_at = excluded.updated_at`,
+    [user(req).id, b.rating, b.text, now, now],
+  )
+  res.json({ review: { rating: b.rating, text: b.text, at: now } })
+})
+
+/** Клиентские события для CTR (то, что сервер сам не видит) */
+app.post('/api/track', requireUser, async (req, res) => {
+  const b = parse(z.object({ kind: z.enum(EVENT_KINDS) }), req.body ?? {})
+  await trackEvent(user(req).id, b.kind)
+  res.json({ ok: true })
+})
+
 app.post('/api/admin/infinite-hearts', requireUser, requireAdmin, async (req, res) => {
   const b = parse(z.object({ enabled: z.boolean() }), req.body)
   await run('UPDATE users SET infinite_hearts = ? WHERE id = ?', [b.enabled ? 1 : 0, user(req).id])
@@ -256,6 +287,7 @@ app.post('/api/admin/reset', requireUser, requireAdmin, async (req, res) => {
       { sql: 'DELETE FROM active_lessons WHERE user_id = ?', args: [u.id] },
       { sql: 'DELETE FROM projects WHERE user_id = ?', args: [u.id] },
       { sql: 'DELETE FROM coin_events WHERE user_id = ?', args: [u.id] },
+      { sql: 'DELETE FROM events WHERE user_id = ?', args: [u.id] },
       {
         sql: `UPDATE users SET
                 hearts = 5,
@@ -290,6 +322,7 @@ app.post('/api/admin/reset', requireUser, requireAdmin, async (req, res) => {
 
 app.post('/api/nodes/:id/open', requireUser, async (req, res) => {
   const r = await openNode(user(req), String(req.params.id))
+  if (r.open === 'lesson') await trackEvent(user(req).id, 'lesson_open')
   res.json({ ...r, state: await getState(user(req)) })
 })
 
@@ -325,7 +358,8 @@ app.post('/api/lesson/retry', requireUser, async (req, res) => {
 
 /* ---------- Магазин ---------- */
 
-app.get('/api/shop', requireUser, async (_req, res) => {
+app.get('/api/shop', requireUser, async (req, res) => {
+  await trackEvent(user(req).id, 'shop_view')
   res.json(await shopView())
 })
 

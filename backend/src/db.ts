@@ -123,6 +123,22 @@ const SCHEMA = [
     PRIMARY KEY (user_id, day)
   )`,
   `CREATE INDEX IF NOT EXISTS visits_day ON visits(day)`,
+  // Отзывы о приложении: один на юзера, повторная отправка перезаписывает
+  `CREATE TABLE IF NOT EXISTS reviews (
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    rating INTEGER NOT NULL,
+    text TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`,
+  // Показы и клики для CTR: открытие урока, просмотр магазина, открытие формы отзыва
+  `CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS events_time ON events(created_at)`,
 ]
 
 // Колонки, добавленные после первого релиза: ALTER для уже существующих баз

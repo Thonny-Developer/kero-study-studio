@@ -1,13 +1,16 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import { Avatar, AVATAR_FRAMES, NAME_COLORS, StyledName } from '../components/ui/Avatar'
 import { Button } from '../components/ui/Button'
 import { Coin } from '../components/ui/Coin'
+import { Stars } from '../components/ui/Stars'
+import { api, ApiError } from '../lib/api'
 import { MONTHS, MONTHS_GEN, plural, WEEKDAYS } from '../lib/date'
 import { Icon, type IconName } from '../lib/icons'
-import type { Me } from '../lib/types'
+import type { Me, MyReview } from '../lib/types'
 import { useGame } from '../store/game'
+import { toast } from '../store/toast'
 
 function Calendar({ me }: { me: Me }) {
   const [y, m, today] = me.today.split('-').map(Number)
@@ -114,6 +117,105 @@ function EmailCard({ me }: { me: Me }) {
           </button>
         )
       )}
+    </div>
+  )
+}
+
+const RATING_LABELS = ['', 'Плохо', 'Так себе', 'Нормально', 'Хорошо', 'Отлично']
+
+/** Отзыв о приложении: кнопка раскрывает форму со звёздами и текстом */
+function ReviewCard() {
+  const [mine, setMine] = useState<MyReview['review']>(null)
+  const [open, setOpen] = useState(false)
+  const [rating, setRating] = useState(0)
+  const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
+
+  useEffect(() => {
+    api<MyReview>('/api/review')
+      .then((r) => setMine(r.review))
+      .catch(() => {})
+  }, [])
+
+  const start = () => {
+    setRating(mine?.rating ?? 0)
+    setText(mine?.text ?? '')
+    setOpen(true)
+    api('/api/track', { body: { kind: 'review_open' } }).catch(() => {})
+  }
+
+  const send = async () => {
+    if (!rating || sending) return
+    setSending(true)
+    try {
+      const r = await api<MyReview>('/api/review', { body: { rating, text: text.trim() } })
+      setMine(r.review)
+      setOpen(false)
+      toast('Спасибо за отзыв!')
+    } catch (e) {
+      toast(e instanceof ApiError ? e.message : 'Не получилось отправить отзыв')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-btn border-[1.5px] border-line bg-sf p-3.5">
+      <div className="flex items-center gap-3">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-tile bg-gold-soft text-gold-ink">
+          <Icon name="star" size={22} />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="truncate text-[15px] font-bold">{mine ? 'Твой отзыв' : 'Оцени Vibely'}</span>
+          {mine ? <Stars value={mine.rating} size={14} /> : <span className="text-[12.5px] font-semibold text-ink-2">Расскажи, что нравится и что бесит</span>}
+        </div>
+        {!open && (
+          <button type="button" onClick={start} className="shrink-0 text-sm font-bold text-ink-2">
+            {mine ? 'Изменить' : 'Написать'}
+          </button>
+        )}
+      </div>
+      {mine?.text && !open && <p className="whitespace-pre-wrap break-words rounded-xl bg-bg px-3 py-2 text-[13px] font-medium text-ink-2">{mine.text}</p>}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.form
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="flex flex-col gap-2.5 overflow-hidden"
+            onSubmit={(e) => {
+              e.preventDefault()
+              send()
+            }}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <Stars value={rating} size={30} onChange={setRating} />
+              <span className="text-[13px] font-bold text-ink-3">{RATING_LABELS[rating]}</span>
+            </div>
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              maxLength={1000}
+              rows={4}
+              placeholder="Что понравилось, чего не хватает?"
+              className="min-h-[96px] resize-none rounded-xl border-2 border-line bg-bg px-3 py-2.5 text-[15px] font-semibold text-ink outline-none placeholder:font-medium placeholder:text-ink-3 focus:border-acc"
+            />
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setOpen(false)} className="h-11 shrink-0 rounded-xl px-4 text-sm font-bold text-ink-3">
+                Отмена
+              </button>
+              <button
+                type="submit"
+                disabled={!rating || sending}
+                className="h-11 flex-1 rounded-xl bg-acc text-sm font-bold text-white shadow-[0_3px_0_var(--accSh)] active:translate-y-[3px] active:shadow-none disabled:bg-sf2 disabled:text-ink-3 disabled:shadow-none"
+              >
+                {rating ? 'Отправить' : 'Поставь оценку'}
+              </button>
+            </div>
+          </motion.form>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -352,6 +454,7 @@ export function ProfileScreen() {
         <div className="flex flex-col gap-[18px] desk:grid desk:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] desk:items-start desk:gap-6">
           <div className="flex flex-col gap-[18px]">
             <EmailCard me={me} />
+            <ReviewCard />
 
             {me.isAdmin && (
               <section className="rounded-unit border-[1.5px] border-acc/30 bg-sf p-3.5">
