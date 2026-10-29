@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
 import { api, ApiError, onUnauthorized, setToken } from '../lib/api'
+import { plural } from '../lib/date'
 import type { AvatarFrameId, BlinkSkinId, Course, LessonResult, LessonView, Me, NameColorId, PetConsumableId, PetDecorId, Shop, ShopItemId, Track } from '../lib/types'
 import { toast } from './toast'
 
@@ -12,6 +13,8 @@ export const XP_PROJECT = 50
 
 export type Screen = 'welcome' | 'onboarding' | 'login' | 'forgot' | 'verify' | 'map' | 'lesson' | 'end' | 'noHearts' | 'project' | 'league' | 'pet' | 'shop' | 'profile' | 'adminStats'
 export type Theme = 'light' | 'dark'
+/** Кому админ выдаёт XP/монеты */
+export type GrantTarget = 'me' | 'all' | { id: string; name: string }
 
 export interface Draft {
   goal: string | null
@@ -74,8 +77,8 @@ interface Actions {
   setNameColor: (color: NameColorId | null) => Promise<void>
   setBlinkSkin: (skin: BlinkSkinId | null) => Promise<void>
   toggleInfiniteHearts: (enabled: boolean) => Promise<void>
-  addAdminXp: (amount?: number) => Promise<void>
-  addAdminCoins: (amount: number) => Promise<void>
+  addAdminXp: (amount?: number, to?: GrantTarget) => Promise<void>
+  addAdminCoins: (amount: number, to?: GrantTarget) => Promise<void>
   adminReset: () => Promise<void>
   /** Обмен XP → монеты; 'price-changed' — курс сменился, пока юзер смотрел */
   exchange: (coins: number, price: number) => Promise<{ cost: number; shop: Shop } | 'price-changed' | false>
@@ -130,6 +133,27 @@ export const useGame = create<GameState>()(
       const applyMe = (me: Me, extra: Partial<Data> = {}) => {
         const key = taskKey(me.lesson)
         set({ me, track: get().me ? get().track : me.user.track, ...(get().ui.key !== key ? { ui: { ...EMPTY_UI, key } } : {}), ...extra })
+      }
+
+      /** Выдача XP/монет: себе — старыми ручками, другим и всем — через /api/admin/grant */
+      const adminGrant = async (kind: 'xp' | 'coins', amount: number, to: GrantTarget) => {
+        if (get().busy) return
+        set({ busy: true })
+        const what = kind === 'xp' ? `${amount.toLocaleString('ru-RU')} XP` : `${amount.toLocaleString('ru-RU')} ${plural(amount, 'монета', 'монеты', 'монет')}`
+        try {
+          if (to === 'me') {
+            applyMe(await api<Me>(`/api/admin/${kind}`, { body: { amount } }))
+            toast(`+${what} начислено`)
+          } else {
+            const r = await api<{ count: number; state: Me }>('/api/admin/grant', { body: { kind, amount, to: to === 'all' ? { all: true } : { id: to.id } } })
+            applyMe(r.state)
+            toast(to === 'all' ? `+${what} — ${r.count} ${plural(r.count, 'игроку', 'игрокам', 'игрокам')}` : `+${what} → ${to.name}`)
+          }
+        } catch (e) {
+          fail(e)
+        } finally {
+          set({ busy: false })
+        }
       }
 
       const signedIn = async (token: string) => {
@@ -333,31 +357,9 @@ export const useGame = create<GameState>()(
           }
         },
 
-        addAdminXp: async (amount = 500) => {
-          if (get().busy) return
-          set({ busy: true })
-          try {
-            applyMe(await api<Me>('/api/admin/xp', { body: { amount } }))
-            toast(`+${amount.toLocaleString('ru-RU')} XP начислено`)
-          } catch (e) {
-            fail(e)
-          } finally {
-            set({ busy: false })
-          }
-        },
+        addAdminXp: (amount = 500, to = 'me') => adminGrant('xp', amount, to),
 
-        addAdminCoins: async (amount) => {
-          if (get().busy) return
-          set({ busy: true })
-          try {
-            applyMe(await api<Me>('/api/admin/coins', { body: { amount } }))
-            toast(`+${amount.toLocaleString('ru-RU')} монет начислено`)
-          } catch (e) {
-            fail(e)
-          } finally {
-            set({ busy: false })
-          }
-        },
+        addAdminCoins: (amount, to = 'me') => adminGrant('coins', amount, to),
 
         adminReset: async () => {
           if (get().busy) return

@@ -9,7 +9,7 @@ import { api, ApiError } from '../lib/api'
 import { MONTHS, MONTHS_GEN, plural, WEEKDAYS } from '../lib/date'
 import { Icon, type IconName } from '../lib/icons'
 import type { Me, MyReview } from '../lib/types'
-import { useGame } from '../store/game'
+import { type GrantTarget, useGame } from '../store/game'
 import { toast } from '../store/toast'
 
 function Calendar({ me }: { me: Me }) {
@@ -295,6 +295,153 @@ function AdminGrant({
   )
 }
 
+type Locks = { buy: boolean; sell: boolean }
+
+/** Блокировка обменника для всех: покупка и продажа монет отдельно */
+function ExchangeLock() {
+  const [locks, setLocks] = useState<Locks | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    api<Locks>('/api/admin/exchange-lock')
+      .then(setLocks)
+      .catch(() => {})
+  }, [])
+
+  const toggle = async (side: keyof Locks) => {
+    if (!locks || saving) return
+    setSaving(true)
+    try {
+      const next = await api<Locks>('/api/admin/exchange-lock', { body: { [side]: !locks[side] } })
+      setLocks(next)
+      toast(`${side === 'buy' ? 'Покупка' : 'Продажа'} монет ${next[side] ? 'закрыта' : 'открыта'}`)
+    } catch (e) {
+      toast(e instanceof ApiError ? e.message : 'Не получилось')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const rows: { side: keyof Locks; label: string }[] = [
+    { side: 'buy', label: 'XP → монеты' },
+    { side: 'sell', label: 'Монеты → XP' },
+  ]
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border-2 border-line bg-bg px-3.5 py-2.5">
+      <span className="flex items-center gap-2.5">
+        <Coin size={19} />
+        <span className="text-sm font-bold">Обменник</span>
+        {locks && (locks.buy || locks.sell) && <span className="rounded-md bg-err-soft px-1.5 py-0.5 font-mono text-[10.5px] font-extrabold text-err-ink">ЗАКРЫТ</span>}
+      </span>
+      <div className="grid grid-cols-2 gap-1.5">
+        {rows.map(({ side, label }) => {
+          const off = locks?.[side]
+          return (
+            <button
+              key={side}
+              type="button"
+              role="switch"
+              aria-checked={!off}
+              disabled={!locks || saving}
+              onClick={() => toggle(side)}
+              className={`flex h-10 items-center justify-between gap-2 rounded-lg border-[1.5px] px-2.5 text-[12.5px] font-bold transition-colors disabled:opacity-60 ${off ? 'border-err/40 bg-err-soft text-err-ink' : 'border-line bg-sf text-ink-2'}`}
+            >
+              <span className="truncate">{label}</span>
+              <span className="shrink-0 font-mono text-[10.5px] font-extrabold">{locks ? (off ? 'ВЫКЛ' : 'ВКЛ') : '…'}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+type FoundUser = { id: string; name: string; email: string | null }
+
+/** Кому выдавать: себе, конкретному игроку (поиск по имени/почте) или всем */
+function GrantTargetPicker({ value, onChange }: { value: GrantTarget; onChange: (t: GrantTarget) => void }) {
+  const mode = value === 'me' || value === 'all' ? value : 'user'
+  const [q, setQ] = useState('')
+  const [found, setFound] = useState<FoundUser[]>([])
+  const [picking, setPicking] = useState(false)
+
+  useEffect(() => {
+    if (!picking || q.trim().length < 2) return setFound([])
+    let alive = true
+    const t = setTimeout(() => {
+      api<{ users: FoundUser[] }>(`/api/admin/users?q=${encodeURIComponent(q.trim())}`)
+        .then((r) => alive && setFound(r.users))
+        .catch(() => {})
+    }, 250)
+    return () => {
+      alive = false
+      clearTimeout(t)
+    }
+  }, [q, picking])
+
+  const tabs: { id: typeof mode; label: string }[] = [
+    { id: 'me', label: 'Мне' },
+    { id: 'user', label: 'Игроку' },
+    { id: 'all', label: 'Всем' },
+  ]
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex rounded-xl bg-sf2 p-1">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => {
+              if (t.id === 'user') setPicking(true)
+              else {
+                setPicking(false)
+                onChange(t.id)
+              }
+            }}
+            className={`h-8 flex-1 rounded-[9px] text-[12.5px] font-bold transition-colors ${(t.id === 'user' ? mode === 'user' || picking : mode === t.id && !picking) ? 'bg-sf text-ink shadow-[0_2px_0_var(--line)]' : 'text-ink-3'}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {typeof value === 'object' && !picking && (
+        <button type="button" onClick={() => setPicking(true)} className="flex items-center justify-between rounded-lg border-[1.5px] border-acc bg-acc-soft px-3 py-2 text-left">
+          <span className="truncate text-[13px] font-bold text-acc-ink">{value.name}</span>
+          <span className="shrink-0 text-[12px] font-bold text-acc-ink">сменить</span>
+        </button>
+      )}
+      {picking && (
+        <div className="flex flex-col gap-1">
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Имя или почта игрока"
+            className="h-9 rounded-lg border-[1.5px] border-line bg-sf px-3 text-sm font-bold text-ink outline-none placeholder:font-medium placeholder:text-ink-3 focus:border-acc"
+          />
+          {found.map((u) => (
+            <button
+              key={u.id}
+              type="button"
+              onClick={() => {
+                onChange({ id: u.id, name: u.name })
+                setPicking(false)
+                setQ('')
+              }}
+              className="flex flex-col rounded-lg bg-sf px-3 py-1.5 text-left hover:bg-sf2"
+            >
+              <span className="truncate text-[13px] font-bold">{u.name}</span>
+              {u.email && <span className="truncate font-mono text-[11px] text-ink-3">{u.email}</span>}
+            </button>
+          ))}
+          {q.trim().length >= 2 && !found.length && <span className="px-1 text-[12px] font-semibold text-ink-3">Никого не нашли</span>}
+        </div>
+      )}
+      {value === 'all' && !picking && <span className="px-1 text-[12px] font-semibold text-gold-ink">Начисление уйдёт каждому зарегистрированному игроку</span>}
+    </div>
+  )
+}
+
 const ADMIN_KEY = 'vibely-admin-open'
 const readAdminOpen = () => {
   try {
@@ -314,6 +461,12 @@ export function ProfileScreen() {
   const [showStats, setShowStats] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
   const [adminOpen, setAdminOpen] = useState(readAdminOpen)
+  const [grantTo, setGrantTo] = useState<GrantTarget>('me')
+  // массовая выдача необратима — переспрашиваем
+  const grantGuard = (what: string, fn: (amount: number, to: GrantTarget) => Promise<void>) => async (amount: number) => {
+    if (grantTo === 'all' && !window.confirm(`Начислить ${amount.toLocaleString('ru-RU')} ${what} всем игрокам?`)) return
+    await fn(amount, grantTo)
+  }
   const toggleAdmin = () =>
     setAdminOpen((v) => {
       try {
@@ -513,6 +666,8 @@ export function ProfileScreen() {
                             {me.infiniteHearts ? '∞' : '○'}
                           </span>
                         </button>
+                        <ExchangeLock />
+                        <GrantTargetPicker value={grantTo} onChange={setGrantTo} />
                         <AdminGrant
                           icon={<Icon name="bolt" size={19} />}
                           tint="text-acc"
@@ -520,9 +675,9 @@ export function ProfileScreen() {
                           max={100_000}
                           presets={[100, 500, 2500]}
                           busy={busy}
-                          onGrant={addAdminXp}
+                          onGrant={grantGuard('XP', addAdminXp)}
                         />
-                        <AdminGrant icon={<Coin size={19} />} label="Накрутка монет" max={1_000_000} presets={[100, 1000, 10000]} busy={busy} onGrant={addAdminCoins} />
+                        <AdminGrant icon={<Coin size={19} />} label="Накрутка монет" max={1_000_000} presets={[100, 1000, 10000]} busy={busy} onGrant={grantGuard('монет', addAdminCoins)} />
                         <Button
                           size="md"
                           variant={confirmReset ? 'err' : 'secondary'}

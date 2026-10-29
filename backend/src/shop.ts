@@ -335,8 +335,32 @@ export async function ownedItems(userId: string) {
   return rows.map((r) => r.item)
 }
 
+/* ---------- Блокировка обменника ---------- */
+
+export type ExchangeLocks = { buy: boolean; sell: boolean }
+
+export async function exchangeLocks(): Promise<ExchangeLocks> {
+  const rows = await all<{ key: string; value: string }>("SELECT key, value FROM settings WHERE key IN ('lock_buy', 'lock_sell')")
+  const on = (k: string) => rows.some((r) => r.key === k && r.value === '1')
+  return { buy: on('lock_buy'), sell: on('lock_sell') }
+}
+
+export async function setExchangeLocks(next: Partial<ExchangeLocks>) {
+  for (const [side, v] of Object.entries(next)) {
+    if (v === undefined) continue
+    await run('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value', [`lock_${side}`, v ? '1' : '0'])
+  }
+  return exchangeLocks()
+}
+
+async function assertOpen(side: keyof ExchangeLocks) {
+  if ((await exchangeLocks())[side])
+    throw new HttpError(423, side === 'buy' ? 'Покупка монет временно закрыта' : 'Продажа монет временно закрыта', 'exchange-locked')
+}
+
 export async function shopView() {
-  return { ...(await rate()), items: Object.fromEntries(Object.entries(ITEMS).map(([id, i]) => [id, i.price])) as Record<ItemId, number> }
+  const [r, locked] = await Promise.all([rate(), exchangeLocks()])
+  return { ...r, locked, items: Object.fromEntries(Object.entries(ITEMS).map(([id, i]) => [id, i.price])) as Record<ItemId, number> }
 }
 
 /* ---------- Операции ---------- */
@@ -345,6 +369,7 @@ export async function shopView() {
 export async function exchange(u: UserRow, body: { coins?: unknown; price?: unknown }) {
   const coins = Number(body.coins)
   if (!Number.isInteger(coins) || coins < 1 || coins > 10_000) throw bad('Укажи, сколько монет нужно')
+  await assertOpen('buy')
   const now = Date.now()
   const { events } = await loadMarketData(now - LOOKBACK - PRICE_STEP, now)
   const netBefore = netImpulseAt(now, events)
@@ -368,6 +393,7 @@ export async function exchange(u: UserRow, body: { coins?: unknown; price?: unkn
 export async function sell(u: UserRow, body: { coins?: unknown; price?: unknown }) {
   const coins = Number(body.coins)
   if (!Number.isInteger(coins) || coins < 1 || coins > 10_000) throw bad('Укажи, сколько монет продать')
+  await assertOpen('sell')
   const now = Date.now()
   const { events } = await loadMarketData(now - LOOKBACK - PRICE_STEP, now)
   const netBefore = netImpulseAt(now, events)

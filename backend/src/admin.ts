@@ -1,6 +1,6 @@
 import { findNode } from './content/lessons.js'
-import { all, one, run } from './db.js'
-import { dayKey, shiftDay } from './time.js'
+import { all, db, one, run, type Stmt } from './db.js'
+import { dayKey, shiftDay, weekKey } from './time.js'
 
 // Админ-статистика: посещения, уроки, магазин, XP. Дневные ряды строятся в таймзоне админа.
 
@@ -29,6 +29,49 @@ export type EventKind = (typeof EVENT_KINDS)[number]
 
 export async function trackEvent(userId: string, kind: EventKind) {
   await run('INSERT INTO events (user_id, kind, created_at) VALUES (?, ?, ?)', [userId, kind, Date.now()])
+}
+
+/** Поиск игроков для выдачи: по имени или почте */
+export async function findUsers(q: string) {
+  const like = `%${q.trim().toLowerCase().replace(/%/g, '')}%`
+  const rows = await all<{ id: string; name: string; email: string | null }>(
+    'SELECT id, name, email FROM users WHERE name_key LIKE ? OR email_key LIKE ? ORDER BY name_key LIMIT 8',
+    [like, like],
+  )
+  return rows.map((r) => ({ id: r.id, name: r.name, email: r.email }))
+}
+
+/**
+ * Начисление XP или монет одному юзеру или всем. XP пишется с днём и неделей
+ * в таймзоне получателя — так же, как обычные начисления (лига, календарь)
+ */
+export async function grant(kind: 'xp' | 'coins', amount: number, to: { all: true } | { id: string }) {
+  const where = 'all' in to ? '' : ' WHERE id = ?'
+  const args = 'all' in to ? [] : [to.id]
+  const now = Date.now()
+  const stmts: Stmt[] = []
+  let count: number
+  if (kind === 'xp') {
+    const zones = await all<{ tz: string; n: number }>(`SELECT tz, COUNT(*) AS n FROM users${where} GROUP BY tz`, args)
+    count = zones.reduce((a, z) => a + Number(z.n), 0)
+    for (const { tz } of zones) {
+      const day = dayKey(tz)
+      stmts.push({
+        sql: `INSERT INTO xp_events (user_id, amount, reason, day, week, created_at) SELECT id, ?, 'admin', ?, ?, ? FROM users WHERE tz = ?${where.replace(' WHERE', ' AND')}`,
+        args: [amount, day, weekKey(day), now, tz, ...args],
+      })
+    }
+  } else {
+    count = Number((await one<{ n: number }>(`SELECT COUNT(*) AS n FROM users${where}`, args))?.n ?? 0)
+    // kind 'admin' не участвует в расчёте курса обменника
+    stmts.push(
+      { sql: `UPDATE users SET coins = coins + ?${where}`, args: [amount, ...args] },
+      { sql: `INSERT INTO coin_events (user_id, kind, amount, created_at) SELECT id, 'admin', ?, ? FROM users${where}`, args: [amount, now, ...args] },
+    )
+  }
+  if (!count) return 0
+  await db().batch(stmts, 'write')
+  return count
 }
 
 function median(xs: number[]) {

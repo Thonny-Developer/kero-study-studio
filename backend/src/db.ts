@@ -139,6 +139,11 @@ const SCHEMA = [
     created_at INTEGER NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS events_time ON events(created_at)`,
+  // Глобальные переключатели админа (например, блокировка обменника)
+  `CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  )`,
 ]
 
 // Колонки, добавленные после первого релиза: ALTER для уже существующих баз

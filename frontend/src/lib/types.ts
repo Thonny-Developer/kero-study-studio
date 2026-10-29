@@ -246,6 +246,8 @@ export interface Shop {
   day: [number, number][]
   week: [number, number][]
   market: ShopMarket
+  /** обменник закрыт админом: buy — XP → монеты, sell — монеты → XP */
+  locked: { buy: boolean; sell: boolean }
   items: Record<ShopItemId, number>
 }
 

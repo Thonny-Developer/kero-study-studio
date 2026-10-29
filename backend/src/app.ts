@@ -10,11 +10,11 @@ import { answer, buildProject, getProject, getState, league, next, openNode, qui
 import { bad, HttpError } from './http.js'
 import { projectPage } from './page.js'
 import { confirmLink, confirmVerification, finishReset, normEmail, sendReset, sendVerification } from './email.js'
-import { buy, exchange, isFrameId, isNameColorId, isSkinId, ownedItems, sell, shopView } from './shop.js'
+import { buy, exchange, exchangeLocks, isFrameId, isNameColorId, isSkinId, ownedItems, sell, setExchangeLocks, shopView } from './shop.js'
 import { buyPetDecor, feedPet, playWithPet, togglePetDecor } from './pet.js'
 import { dayKey, weekKey } from './time.js'
 import { courseView } from './views.js'
-import { adminStats, EVENT_KINDS, STAT_RANGES, trackEvent, trackVisit, type StatRange } from './admin.js'
+import { adminStats, EVENT_KINDS, findUsers, grant, STAT_RANGES, trackEvent, trackVisit, type StatRange } from './admin.js'
 
 export const app = express()
 app.set('trust proxy', true)
@@ -270,6 +270,36 @@ app.post('/api/admin/coins', requireUser, requireAdmin, async (req, res) => {
   )
   u.coins += b.amount
   res.json(await getState(u))
+})
+
+app.get('/api/admin/users', requireUser, requireAdmin, async (req, res) => {
+  const q = String(req.query.q ?? '')
+  res.json({ users: q.trim().length >= 2 ? await findUsers(q) : [] })
+})
+
+app.post('/api/admin/grant', requireUser, requireAdmin, async (req, res) => {
+  const b = parse(
+    z.object({
+      kind: z.enum(['xp', 'coins']),
+      amount: z.number().int().min(1),
+      to: z.union([z.object({ all: z.literal(true) }), z.object({ id: z.string().min(1) })]),
+    }),
+    req.body ?? {},
+  )
+  const max = b.kind === 'xp' ? 100_000 : 1_000_000
+  if (b.amount > max) throw bad(`Максимум — ${max.toLocaleString('ru-RU')}`)
+  const count = await grant(b.kind, b.amount, b.to)
+  if (!count) throw bad('Игрок не найден')
+  res.json({ count, state: await getState(user(req)) })
+})
+
+app.get('/api/admin/exchange-lock', requireUser, requireAdmin, async (_req, res) => {
+  res.json(await exchangeLocks())
+})
+
+app.post('/api/admin/exchange-lock', requireUser, requireAdmin, async (req, res) => {
+  const b = parse(z.object({ buy: z.boolean().optional(), sell: z.boolean().optional() }), req.body ?? {})
+  res.json(await setExchangeLocks(b))
 })
 
 app.get('/api/admin/stats', requireUser, requireAdmin, async (req, res) => {

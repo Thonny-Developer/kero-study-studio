@@ -115,6 +115,7 @@ export function ExchangePanel({ shop, reload, onShop }: { shop: Shop | null; rel
   const max = side === 'buy' ? maxAffordableCoins(xp, price, netImpulse) : Math.min(10_000, myCoins)
   const coins = Math.min(Math.max(amount, max ? 1 : 0), max)
   const quote = quoteTrade(price, netImpulse, coins, side)
+  const locked = !!shop?.locked?.[side]
 
   const chartPoints = shop ? (range === 'live' ? shop.live : range === 'day' ? shop.day : shop.week) : []
   const startPrice = chartPoints[0]?.[1] ?? price
@@ -446,8 +447,12 @@ export function ExchangePanel({ shop, reload, onShop }: { shop: Shop | null; rel
 
         <div className="relative mt-4">
           <AnimatePresence>{burst && <Burst key={burst.key} n={7} kind={burst.side} />}</AnimatePresence>
-          <Button variant={side === 'buy' ? 'gold' : 'acc'} disabled={!shop || !coins || busy} onClick={submit}>
-            {side === 'buy'
+          <Button variant={side === 'buy' ? 'gold' : 'acc'} disabled={!shop || !coins || busy || locked} onClick={submit}>
+            {locked
+              ? side === 'buy'
+                ? 'Покупка монет закрыта'
+                : 'Продажа монет закрыта'
+              : side === 'buy'
               ? max
                 ? `Купить (${fmtPrice(quote. priceAfter)} XP)`
                 : 'Не хватает XP'
